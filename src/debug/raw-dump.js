@@ -1,4 +1,3 @@
-const hap = require("hap-nodejs");
 var config = require('./config.json');
 var floclass = require('./flomain.js');
 var flo = new floclass (console,config);
