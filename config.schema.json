@@ -1,7 +1,8 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "Flo-by-Moen",
   "pluginType": "platform",
   "singular": true,
+  "footerDisplay": "Flo Module Configuration",
   "schema": {
     "type": "object",
     "properties": {
@@ -9,8 +10,78 @@
         "title": "Name",
         "type": "string",
         "required": true,
-        "default": "Example Dynamic Platform"
+        "default": "Flo-by-Moen",
+        "placeholder": "e.g. Flo By Moen"
+      },
+      "auth": {
+        "title": "Authorization",
+        "type": "object",
+        "properties": {
+          "username": {
+            "title": "Flo Username",
+            "type": "string",
+            "required": true
+          },
+          "password": {
+            "title": "Flo Password",
+            "type": "string",
+            "required": true
+          }
+        }
+      },
+        "debug": {
+        "title": " Debug",
+        "type": "boolean"
+      },
+        "deviceRefresh": {
+        "title": "Device Refresh Interval",
+        "type": "integer",
+        "default": 30,
+        "description": "Poll interval to obtain device updates in seconds. <b>Please note:</b> A very aggressive value may cause lockout to your account.",
+        "minimum": 5
+      },
+      "excludedDevices": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "description": "Serial Number"
+        }
       }
     }
-  }
+  },
+  "layout": [{
+      "type": "fieldset",
+      "items": [
+        "name",
+        "auth.username",
+        "auth.password"
+      ]
+    },
+    {
+      "type": "fieldset",
+      "expandable": true,
+      "title": "Advanced Options",
+      "items": [{
+          "key": "debug",
+          "description": "To see all messages the Homebridge debug (<code>-D</code>) option must also be enabled. <small>See <a target='_blank' href='https://github.com/homebridge/homebridge-raspbian-image/wiki/How-To-Enable-Debug-or-Insecure-Mode'>https://github.com/homebridge/homebridge-raspbian-image/wiki/How-To-Enable-Debug-or-Insecure-Mode</a></small>"
+        },
+        "deviceRefresh",
+        {
+          "key": "excludedDevices",
+          "title": "Excluded Devices",
+          "description": "A list of devices to exclude from HomeKit. Users device serial number which can be found in the Flo app.",
+          "add": "Add Another Device",
+          "type": "array",
+          "items": [
+            {
+              "type": "fieldset",
+              "items": [
+                "excludedDevices[]"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
