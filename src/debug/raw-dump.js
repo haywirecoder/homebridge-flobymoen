@@ -1,6 +1,7 @@
-var config = require('./config.json');
-var floclass = require('./flomain.js');
-var flo = new floclass (console,config);
+
+const config = require('./config.json');
+const floclass = require('./flomain.js');
+var flo = new floclass (console,config, "");
 
 
 
