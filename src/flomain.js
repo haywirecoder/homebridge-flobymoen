@@ -1,7 +1,7 @@
-// 'use strict'
-const hap = require("hap-nodejs");
-const { ENGINE_METHOD_DIGESTS } = require('constants');
+
 const EventEmitter = require('events');
+const axios = require('axios');
+const storage = require('node-persist');
 
 
 const FLO_V1_API_BASE = 'https://api.meetflo.com/api/v1';
@@ -9,7 +9,7 @@ const FLO_V2_API_BASE = 'https://api-gw.meetflo.com/api/v2';
 const FLO_AUTH_URL       = FLO_V1_API_BASE + '/users/auth';
 const FLO_USERTOKENS_URL = FLO_V1_API_BASE + '/usertokens/me';
 const FLO_PRESENCE_HEARTBEAT = FLO_V2_API_BASE + '/presence/me';
-// Generic Safari Generic macOS
+// Generic header for Safari macOS to interact with Flo api
 const FLO_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15';
 const FLO_HOME = 'home';
 const FLO_AWAY = 'away';
@@ -21,35 +21,47 @@ const FLO_MODES = [
     FLO_AWAY, 
     FLO_SLEEP 
 ];
-// 
-axios = require('axios');
+
 
 class FlobyMoem extends EventEmitter {
     
-    constructor(log, config) {
+       
+    auth_token = {};
+    flo_devices = [];
+    flo_locations = [];
+    tokenRefreshHandle;
+    deviceRefreshHandle;
+    alertRefreshHandle;
+    deviceRefreshTime;
+    storagePath;
+    log;
+    debug;
+
+    constructor(log, config,debug,storagePath) {
         super();
         this.log = log || console.log;
-        this.auth_token = {};
-        this.flo_devices = [];
-        this.flo_locations = [];
-        this.count = 1;
+        this.debug = debug || console.debug;
         this.tokenRefreshHandle = null;
         this.deviceRefreshHandle = null;
         this.alertRefreshHandle = null;
         this.deviceRefreshTime = config.deviceRefreshInterval * 1000;
         this.auth_token.username = config.username;
         this.auth_token.password = config.password;
+        this.storagePath = storagePath;
         
     };
 
     async init() {
 
         // retrieve login storage login inoformation
-        var ls = hap.HAPStorage.storage();
+       
         var promiseRefTokenHandle;
-        this.auth_token.user_id  = ls.getItem('user_id'); 
-        this.auth_token.expiry = ls.getItem('expiry'); 
-        this.auth_token.token = ls.getItem('token'); 
+        // Initializes the storage
+        storage.init({ dir: this.storagePath });
+
+        this.auth_token.user_id  = await storage.getItem('user_id'); 
+        this.auth_token.expiry = await storage.getItem('expiry'); 
+        this.auth_token.token = await storage.getItem('token'); 
 
         
         // If token not present or expired obtain new token
@@ -93,13 +105,13 @@ class FlobyMoem extends EventEmitter {
         if (this.tokenRefreshHandle) 
         {
             clearTimeout(this.tokenRefreshHandle);
-            toekenRefreshHandle = null;
+            this.tokenRefreshHandle = null;
         }
         // Try to login using username and password to obtain a new token
         this.log.info("Refreshing Token...");
         
         try {
-            var ls = hap.HAPStorage.storage();
+           
             const response = await axios.post(FLO_AUTH_URL, {
             'username': this.auth_token.username,
             'password': this.auth_token.password });
@@ -111,9 +123,9 @@ class FlobyMoem extends EventEmitter {
             this.auth_token.expiry = Date.now() + ((response.data.tokenExpiration * 1000)/2); 
 
             // store for later use user ID, token and expiration date, if system is restarted for any reason.
-            ls.setItem('user_id',this.auth_token.user_id);
-            ls.setItem('token',this.auth_token.token);
-            ls.setItem('expiry',this.auth_token.expiry);
+            storage.setItem('user_id',this.auth_token.user_id);
+            storage.setItem('token',this.auth_token.token);
+            storage.setItem('expiry',this.auth_token.expiry);
 
             // Display temporary access token and experation time.
             const re_expireddate = new Date(this.auth_token.expiry).toISOString();
@@ -217,8 +229,8 @@ class FlobyMoem extends EventEmitter {
         var statusheader = { 'isInternalAlarm': 'false',
                    'locationId': this.flo_locations[0],
                    'status': 'triggered',
-                   'severity': 'warning',
-                   'severity': 'critical',
+                   'severity': 'warning', 
+                   //'severity': 'critical',
                    'page': 1,
                    'size': 100
         }
@@ -314,7 +326,7 @@ class FlobyMoem extends EventEmitter {
             this.deviceRefreshHandle = null;
         }
         
-        this.log.info("Refreshing Devices...");
+        this.log.info("Refreshing Devices Data...");
        
         for (var i = 0; i < this.flo_devices.length; i++) {
             let loc_device = this.flo_devices[i];
@@ -348,7 +360,7 @@ class FlobyMoem extends EventEmitter {
         }
         var heatbeatrequest = {
             ...this.auth_token.header,
-            ...statusheader
+            ...header
         }
         // Generate presence heatbeat
         try {
@@ -361,7 +373,7 @@ class FlobyMoem extends EventEmitter {
         }
 
     }
-   InAlertsStatus(Device)
+   InAlertsStatus(device)
     {
         if ((device.notifications.pending.warningCount > 0) ||  (device.notifications.pending.criticalCount > 0)) 
             return true;
@@ -371,4 +383,4 @@ class FlobyMoem extends EventEmitter {
     };
 }
           
-module.exports = FlobyMoem
+module.exports = FlobyMoem;
