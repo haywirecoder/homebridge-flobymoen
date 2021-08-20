@@ -6,7 +6,7 @@
 </p>
 
 
-# Homebridge Plugin Flo by Moen
+# Homebridge Plugin Flo by Moen (In-Development)
 Flo smart water kit monitoring and control devices via the Flo unofficial cloud API. This module interact with the Smart Water Shutoff and Water sensors. It does not support the recently release Flo Smart Water Faucets. 
 
 
