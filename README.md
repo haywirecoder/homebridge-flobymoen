@@ -6,7 +6,7 @@
 </p>
 
 
-# Homebridge Platform Plugin Template
+# Homebridge Plugin Flo by Moen
+Flo smart water kit monitoring and control devices via the Flo unofficial cloud API. This module interact with the Smart Water Shutoff and Water sensors. It does not support the recently release Flo Smart Water Faucets. 
 
-This is a template Homebridge platform plugin and can be used as a base to help you get started developing your own plugin.
 
