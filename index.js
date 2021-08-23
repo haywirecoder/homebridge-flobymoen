@@ -1,7 +1,11 @@
 const packageJson = require('./package.json');
-const flometer = require('./accessories/floMeter');
+const smartwater = require('./accessories/smartWater');
 const watersensor = require('./accessories/waterSensor');
-const floengine = require("./flomain");
+const floengine = require('./flomain');
+
+// Flo constants
+const FLO_WATERSENSOR ='puck_oem';
+const FLO_SMARTMETER = 'flo_device_v2';
 
 // Flo by Moen HomeBridge Plugin
 const PLUGIN_NAME = 'homebridge-flobymoen';
@@ -18,91 +22,77 @@ class FloByMoenPlatform {
     this.excludedDevices = config.excludedDevices || [];
     this.devices = [];
     this.accessories = [];
-    this.api = api;
-    //this.flo = new floengine (log,config, "",homebridge.hap.Storage);;
-    let refreshInterval = 30000;
+    this.api = api;  
+    this.refreshInterval = config.deviceRefresh * 1000 || 30000;
+    this.flo = new floengine (log, config, this.debug, '/usr/local/lib/node_modules/homebridge-envisalink-ademco/');
     
-    if (config.deviceRefresh) {
-      refreshInterval = config.deviceRefresh * 1000;
-    }
-    this.log.info("Testing-1")
-    api.on('didFinishLaunching', () => {
-      this.initAccessories(this.accessories);
-      /*const flometerAccessory = new flometer("Main","000000001",this.log, this.debug, Service, Characteristic, UUIDGen);
-     
-      this.log.info("Testing-2")
-      // check the accessory was not restored from cache
-      if (!this.accessories.find(accessory => accessory.UUID === flometerAccessory.uuid)) {
-
-        // create a new accessory
-        const newAccessory = new this.api.platformAccessory(flometerAccessory.name, flometerAccessory.uuid);
-        newAccessory.addService(Service.SecuritySystem);
-        flometerAccessory.setAccessory(newAccessory);
-        // register the accessory
-        this.log.info("Testing-4")
-        api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [flometerAccessory.accessory]);
-
-      }*/
-    });
-    this.log.info("Testing-5")
-    /*const flometerAccessory = new flometer("Main","1234567890--1",this.log, this.debug, Service, Characteristic, UUIDGen);
-    let newAccessory = new Accessory("Main", UUIDGen.generate("1234567890"));
-    newAccessory.addService(Service.SecuritySystem);
-    flometerAccessory.setAccessory(newAccessory);
-    this.accessories.push(flometerAccessory.accessory);
-
-    /* this.flo = new floclass (log,config, "",homebridge.hap.Storage);
-
+   
+    // Login in meetflo portal
     this.initialLoad = this.flo.init().then ( () => {
       if (this.debug) this.log.debug('Initialization Successful.');
-      this.discoverDevice = this.flo.discoverDevices().then ( () => {
-        this.flo.refreshAllDevices();
-      })
     }).catch(err => {
-              this.log.error('Initization Failure:', err);
-    });*/
-    
- 
+              this.log.error('Flo API Initization Failure:', err);
+    });
+
+  
+    api.on('didFinishLaunching', () => {
+
+      // When login completes discover devices with flo account
+      this.initialLoad.then(() => {
+          // Discover devices
+          this.flo.discoverDevices().then (() => {
+            
+            // for (var i = 0; i < this.accessories.length; i++) 
+            //  {   
+            //   this.log.info("Removing: ", i) 
+            //   this.removeAccessory(this.accessories[i], false);}
+              
+            // Once devices are discovered update Homekit assessories
+            this.log.info("Adding");
+            this.refreshAccessories();
+        })
+      })
+    });
   }
 
-  initAccessories(flo_devices) {
-    /*if (this.debug) this.log.debug(`Initializing accessories`);
-    for (var i = 0; i < flo_devices.length; i++) {
-      let loc_device = flo_devices[i];
-      switch (device.type) {
+  // Create associates in Homekit based on devices in flo account
+  async refreshAccessories() {
+  if (this.debug) this.log.debug(`Initializing accessories`);
+  
+  // Process each flo devices and create eequivant device
+  for (var i = 0; i < this.flo.flo_devices.length; i++) {
+    let loc_device = this.flo.flo_devices[i];
+    switch (loc_device.type) {
         case FLO_SMARTMETER:
-          //let flometerAccessory = new flometer(loc_device.devicename,loc_device.serialNumber,this.log, this.debug, Service, Characteristic, UUIDGen);
-          const flometerAccessory = new flometer("Main","000000001",this.log, this.debug, Service, Characteristic, UUIDGen);
-          // check the accessory was not restored from cache
-          if (!this.accessories.find(accessory => accessory.UUID === flometerAccessory.uuid)) {
-            // create a new accessory
-            let newAccessory = new this.api.platformAccessory(flometerAccessory.name, flometerAccessory.uuid);
-            newAccessory.addService(Service.SecuritySystem);
-            flometerAccessory.setAccessory(newAccessory);
-            // register the accessory
-            this.addAccessory(flometerAccessory);
-         }
-         break; 
-
+          // var smartWaterAccessory = new smartwater(loc_device.devicename,loc_device.serialNumber,this.log, this.debug, Service, Characteristic, UUIDGen);
+          //   // check the accessory was not restored from cache
+          // if (!this.accessories.find(accessory => accessory.UUID === smartWaterAccessory.uuid)) {
+          //   // create a new accessory
+          //   let newAccessory = new this.api.platformAccessory(smartWaterAccessory.name, smartWaterAccessory.uuid);
+          //   newAccessory.addService(Service.SecuritySystem);
+          //   smartWaterAccessory.setAccessory(newAccessory);
+          //   // register the accessory
+          //   this.addAccessory(smartWaterAccessory);
+          // }
+        break; 
         case FLO_WATERSENSOR: 
-          break;*/
-           //let waterAccessory = new watersensor(loc_device.devicename,loc_device.serialNumber,this.log, this.debug, Service, Characteristic, UUIDGen);
-       
-          let waterAccessory = new watersensor("Bathroom","100000001",this.log, this.debug, Service, Characteristic, UUIDGen);
+          var waterAccessory = new watersensor(loc_device,this.log, this.debug, Service, Characteristic, UUIDGen);
           // check the accessory was not restored from cache
-            if (!this.accessories.find(accessory => accessory.UUID === waterAccessory.uuid)) {
-            // create a new accessory
-            let newAccessory = new this.api.platformAccessory(waterAccessory.name, waterAccessory.uuid);
-            newAccessory.addService(Service.LeakSensor);
-            waterAccessory.setAccessory(newAccessory);
-            // register the accessory
-            this.addAccessory(waterAccessory);
+          if (!this.accessories.find(accessory => accessory.UUID === waterAccessory.uuid)) {
+              // create a new accessory
+              let newAccessory = new this.api.platformAccessory(waterAccessory.name, waterAccessory.uuid);
+              //newAccessory.addService(Service.LeakSensor);
+              waterAccessory.setAccessory(newAccessory);
+              // register the accessory
+              this.addAccessory(waterAccessory);
           }
-     /* }
+        break;
+       }
           
-    }*/
+    }
   }
 
+  //Add accessory to homekit dashboard
   addAccessory(device) {
 
     if (this.debug) this.log.debug('Add accessory');
@@ -114,14 +104,16 @@ class FloByMoenPlatform {
         }
   }
 
-  removeAccessory(accessory) {
+  //Remove accessory to homekit dashboard
+  removeAccessory(accessory, updateIndex) {
     if (this.debug) this.log.debug('Remove accessory');
       if (accessory) {
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
-      if (this.accessories.indexOf(accessory) > -1) {
-          this.accessories.splice(this.accessories.indexOf(accessory), 1);
-      }
+      if (updateIndex) {
+        if (this.accessories.indexOf(accessory) > -1) {
+            this.accessories.splice(this.accessories.indexOf(accessory), 1);
+      }}
   }
 
   configureAccessory(accessory) {
