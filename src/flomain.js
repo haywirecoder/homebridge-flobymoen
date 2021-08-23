@@ -3,7 +3,7 @@ const EventEmitter = require('events');
 const axios = require('axios');
 const storage = require('node-persist');
 
-
+// URL constant for retrieving data
 const FLO_V1_API_BASE = 'https://api.meetflo.com/api/v1';
 const FLO_V2_API_BASE = 'https://api-gw.meetflo.com/api/v2';
 const FLO_AUTH_URL       = FLO_V1_API_BASE + '/users/auth';
@@ -11,6 +11,7 @@ const FLO_USERTOKENS_URL = FLO_V1_API_BASE + '/usertokens/me';
 const FLO_PRESENCE_HEARTBEAT = FLO_V2_API_BASE + '/presence/me';
 // Generic header for Safari macOS to interact with Flo api
 const FLO_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15';
+
 const FLO_HOME = 'home';
 const FLO_AWAY = 'away';
 const FLO_SLEEP = 'sleep';
@@ -21,7 +22,6 @@ const FLO_MODES = [
     FLO_AWAY, 
     FLO_SLEEP 
 ];
-
 
 class FlobyMoem extends EventEmitter {
     
@@ -44,10 +44,12 @@ class FlobyMoem extends EventEmitter {
         this.tokenRefreshHandle = null;
         this.deviceRefreshHandle = null;
         this.alertRefreshHandle = null;
-        this.deviceRefreshTime = config.deviceRefreshInterval * 1000;
-        this.auth_token.username = config.username;
-        this.auth_token.password = config.password;
+        this.deviceRefreshTime = config.deviceRefresh * 1000 || 30000;
+        this.auth_token.username = config.auth.username;
+        this.auth_token.password = config.auth.password;
         this.storagePath = storagePath;
+
+        
         
     };
 
@@ -57,13 +59,15 @@ class FlobyMoem extends EventEmitter {
        
         var promiseRefTokenHandle;
         // Initializes the storage
-        storage.init({ dir: this.storagePath });
-
+        await storage.init();
+        // Get persist items, if exist...
         this.auth_token.user_id  = await storage.getItem('user_id'); 
         this.auth_token.expiry = await storage.getItem('expiry'); 
         this.auth_token.token = await storage.getItem('token'); 
+    
 
-        
+        this.log(this.auth_token);
+
         // If token not present or expired obtain new token
         if (!this.isLoggedIn()) {
                 // obtain new token
@@ -336,7 +340,7 @@ class FlobyMoem extends EventEmitter {
             })
         }
         // Set timer to refresh devices
-        this.deviceRefreshHandle = setTimeout(() => this.refreshAllDevices(), this.deviceRefreshTime); 
+       // this.deviceRefreshHandle = setTimeout(() => this.refreshAllDevices(), this.deviceRefreshTime); 
        
 
     };
