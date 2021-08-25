@@ -16,7 +16,7 @@ const FLO_HOME = 'home';
 const FLO_AWAY = 'away';
 const FLO_SLEEP = 'sleep';
 const FLO_WATERSENSOR ='puck_oem';
-const FLO_SMARTMETER = 'flo_device_v2';
+const FLO_SMARTWATER = 'flo_device_v2';
 const FLO_MODES = [
     FLO_HOME, 
     FLO_AWAY, 
@@ -64,9 +64,6 @@ class FlobyMoem extends EventEmitter {
         this.auth_token.user_id  = await storage.getItem('user_id'); 
         this.auth_token.expiry = await storage.getItem('expiry'); 
         this.auth_token.token = await storage.getItem('token'); 
-    
-
-        this.log(this.auth_token);
 
         // If token not present or expired obtain new token
         if (!this.isLoggedIn()) {
@@ -80,6 +77,9 @@ class FlobyMoem extends EventEmitter {
              let refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
              this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} mins(s).`);
              this.tokenRefreshHandle = setTimeout(() => this.refreshToken, refreshTimeoutmillis); 
+              // Display temporary access 
+            if (this.debug) this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
+        
 
         }
         // Wait for token to be obtain
@@ -123,7 +123,7 @@ class FlobyMoem extends EventEmitter {
             this.auth_token.token = response.data.token;
             this.auth_token.user_id = response.data.tokenPayload.user.user_id;
 
-            // Calculated expiration time
+            // Calculated expiration time assume half life of token provided
             this.auth_token.expiry = Date.now() + ((response.data.tokenExpiration * 1000)/2); 
 
             // store for later use user ID, token and expiration date, if system is restarted for any reason.
@@ -131,10 +131,8 @@ class FlobyMoem extends EventEmitter {
             storage.setItem('token',this.auth_token.token);
             storage.setItem('expiry',this.auth_token.expiry);
 
-            // Display temporary access token and experation time.
-            const re_expireddate = new Date(this.auth_token.expiry).toISOString();
-            this.log.info("Temporary Access Flo Token: " + this.auth_token.token);
-            this.log.info("Expires: " + re_expireddate);
+            // Display temporary access 
+            if (this.debug) this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
         
         }
         catch(err) {
@@ -152,7 +150,8 @@ class FlobyMoem extends EventEmitter {
         
     };
 
-    async  discoverDevices() {
+    // Discover and configure  that have been registered for this account. 
+      async  discoverDevices() {
 
          // Do we have a valid sessions? 
         if (!this.isLoggedIn()) {
@@ -180,7 +179,7 @@ class FlobyMoem extends EventEmitter {
                             // create flo device object
                             var device = {};
                             // Store key information about device
-                            device.devicename = device_info.data.nickname;
+                            device.name = device_info.data.nickname;
                             device.deviceModel = device_info.data.deviceModel;
                             device.type = device_info.data.deviceType;
                             device.serialNumber = device_info.data.serialNumber;
@@ -198,7 +197,7 @@ class FlobyMoem extends EventEmitter {
                                     // Return the battery level for battery-powered device, e.g. leak detectors
                                     device.batterylevel = device_info.data.battery.level;
                                     break;
-                                case FLO_SMARTMETER:
+                                case FLO_SMARTWATER:
                                     device.psi = device_info.data.telemetry.current.psi;
                                     device.systemCurrentState = device_info.data.systemMode.lastKnown;
                                     device.systemTargetState = device_info.data.systemMode.target;
@@ -266,20 +265,20 @@ class FlobyMoem extends EventEmitter {
         }
         // Get device
         var url = FLO_V2_API_BASE + "/devices/" + device.deviceid;     
-        //this.log.debug("Getting ..." + url);        
+               
         try {
             const device_response = await axios.get(url, this.auth_token.header);
             var device_info = device_response;
 
             // Has the object been updated? If the device has not been heard from, no change is needed
             let deviceUpdateTime = new Date(device_info.data.lastHeardFromTime);
-            if (deviceUpdateTime.getTime() == device.lastUpdate.getTime()) {
-                this.log.info(device.devicename + " has no updates.");
-                return true;
-            }
+            // if (deviceUpdateTime.getTime() == device.lastUpdate.getTime()) {
+            //     this.log.info(device.name + " has no updates.");
+            //     return true;
+            // }
 
             // Update key information about device
-            this.log.info(device.devicename + " has updates. Refreshing data...");
+            if (this.debug) this.log.debug("Device Updated Data: ", device_info);
 
             device.lastUpdate = new Date(device_info.data.lastHeardFromTime);
             device.temperature = device_info.data.telemetry.current.tempF;
@@ -294,7 +293,7 @@ class FlobyMoem extends EventEmitter {
                     // Return the battery level for battery-powered device, e.g. leak detectors
                     device.batterylevel = device_info.data.battery.level;
                 break;
-                case FLO_SMARTMETER:
+                case FLO_SMARTWATER:
                     device.psi = device_info.data.telemetry.current.psi;
                     device.systemCurrentState = device_info.data.systemMode.lastKnown;
                     device.systemTargetState = device_info.data.systemMode.target;
@@ -302,8 +301,8 @@ class FlobyMoem extends EventEmitter {
                     device.valveTargetState = device_info.data.valve.target;
                 break;
             } 
-            this.emit('deviceupdate', {
-                id: device.deviceid,
+            // change were detected updata device data elements and trigger updata.
+            this.emit(device.serialNumber, {
                 device: device
             });
             return true;
@@ -316,7 +315,7 @@ class FlobyMoem extends EventEmitter {
         };
     };
 
-    refreshAllDevices() {
+    async backgroundRefresh() {
 
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
@@ -329,18 +328,16 @@ class FlobyMoem extends EventEmitter {
             clearTimeout(this.deviceRefreshHandle);
             this.deviceRefreshHandle = null;
         }
-        
-        this.log.info("Refreshing Devices Data...");
        
+        // Updata all data elements
         for (var i = 0; i < this.flo_devices.length; i++) {
             let loc_device = this.flo_devices[i];
-            this.refreshDevice(loc_device).then ( dev_result => {
-                this.log.info(loc_device.devicename + "...Refresh Complete.");
-                
+            this.refreshDevice(loc_device).then ( dev_result => {                
             })
         }
+       
         // Set timer to refresh devices
-       // this.deviceRefreshHandle = setTimeout(() => this.refreshAllDevices(), this.deviceRefreshTime); 
+       this.deviceRefreshHandle = setTimeout(() => this.backgroundRefresh(), this.deviceRefreshTime); 
        
 
     };
