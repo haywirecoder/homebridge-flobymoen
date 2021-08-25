@@ -4,16 +4,18 @@ const floengine = require("../flomain");
 
 
 class FloSmartWater {
-  //constructor(name, id, log, debug, flo, Service, Characteristic, UUIDGen) {
- constructor(name, id, log, debug, Service, Characteristic, UUIDGen) {
+ 
+ constructor(device, log, debug, Service, Characteristic, UUIDGen) {
     this.Characteristic = Characteristic;
     this.Service = Service;
-    this.id = id;
+    this.id = device.serialNumber;
     this.log = log;
     this.debug = debug;
-    this.name = name;
-    //this.flo = flo;
-    this.uuid = UUIDGen.generate(id);
+    this.name = device.name;
+    this.waterTemperature = device.temperature || -270;
+    this.valueStatus = device.valveCurrentState;
+    this.gallonsPerMin = 1;
+    this.uuid = UUIDGen.generate(device.serialNumber);
    
     this.CURRENT_FLO_TO_HOMEKIT = {
       'OFF': Characteristic.SecuritySystemCurrentState.DISARMED,
@@ -46,8 +48,9 @@ class FloSmartWater {
     callback();
   }
 
-  setAccessory(accessory) {
+  setAccessory(accessory,isNew)  {
     this.accessory = accessory;
+    if (isNew) this.accessory.addService(this.Service.SecuritySystem);
     this.accessory.on('identify', (paired, callback) => this.identify(callback));
 
     this.accessory.getService(this.Service.AccessoryInformation)
@@ -64,22 +67,97 @@ class FloSmartWater {
         .setProps({ validValues: this.VALID_TARGET_STATE_VALUES })
         .on('get', async callback => this.getTargetState(callback))
         .on('set', async (state, callback) => this.setTargetState(state, callback));
+
+
+    // Add temperature sensor
+    if (isNew) this.accessory.addService(this.Service.TemperatureSensor);  
+    this.service = this.accessory.getService(this.Service.TemperatureSensor);
+    // create handlers for required characteristics
+    this.service.getCharacteristic(this.Characteristic.CurrentTemperature)
+    .on('get', async callback => this.getCurrentTemperature(callback));
+
+    // create a new Valve service
+    if (isNew) this.accessory.addService(this.Service.Valve);  
+    this.service = this.accessory.getService(this.Service.Valve);
+
+    // create handlers for required characteristics
+    this.service.getCharacteristic(this.Characteristic.Active)
+        .on('get', async callback => this.getValveActive(callback))
+        .on('set', async (state, callback) => this.setValveActive(state, callback));
+    this.service.getCharacteristic(this.Characteristic.InUse)
+        .on('get', async callback => this.getValveInUse(callback));
+    this.service.getCharacteristic(this.Characteristic.ValveType)
+        .on('get', async callback => this.getValveType(callback));
+    this.service.getCharacteristic(this.Characteristic.StatusFault)
+        .on('get', async callback => this.getValveFault(callback));
+
+
   }
 
-  async getCurrentState(callback, forceRefresh = false) {
-    let characteristic = this.service.getCharacteristic(this.Characteristic.SecuritySystemCurrentState);
-    return callback(null, characteristic.value);
-  }
-
-  async getTargetState(callback, forceRefresh = false) {
+async getCurrentState(callback) {
     
-    let characteristic = this.service.getCharacteristic(this.Characteristic.SecuritySystemTargetState);
-    return callback(null, characteristic.value);
+    var currentValue = this.Characteristic.SecuritySystemCurrentState.DISARMED
+    return callback(null, currentValue);
   }
 
-  async setTargetState(homekitState, callback) {
+async getTargetState(callback) {
+ 
+  var currentValue = this.Characteristic.SecuritySystemCurrentState.DISARMED
+    return callback(null, currentValue);
+  }
+
+async setTargetState(homekitState, callback) {
+
     callback(null);
   }
+
+// Handle requests to get the current temperature characteristic
+async getCurrentTemperature(callback) {
+    // set this to a valid value for CurrentTemperature
+
+    return callback(null,this.waterTemperature);
+    
+  }
+
+// Handle requests to get the current value of the "Active" characteristic
+async getValveActive(callback) {
+
+  var currentValue = this.Characteristic.Active.ACTIVE;
+  // set this to a valid value for Active
+  
+  if (!this.valueStatus) currentValue = this.Characteristic.Active.INACTIVE;
+
+  return callback(null, currentValue);
+}
+
+// Handle requests to set the "Active" characteristic
+async setValveActive(homekitState, callback) {
+  return callback(null);
+}
+
+// Handle requests to get the current value of the "In Use" characteristic
+async getValveInUse(callback) {
+  var currentValue = this.Characteristic.InUse.NOT_IN_USE;
+  // set this to a valid value for InUse
+  if (this.gallonsPerMin > 0) currentValue = this.Characteristic.InUse.IN_USE;
+  return callback(null, currentValue);
+}
+
+
+// Handle requests to get the current value of the "Valve Type" characteristic
+async getValveType(callback) {
+  // set this to a valid value for ValveType
+  var currentValue = this.Characteristic.ValveType.GENERIC_VALVE;
+  return callback(null, currentValue);
+}
+
+// Handle requests to get the fault value characteristic
+async getValveFault(callback) {
+
+  // set this to a valid value for Active
+  var currentValue = this.Characteristic.StatusFault.NO_FAULT;
+  return callback(null, currentValue);
+}
 
  async refreshState() {
     
