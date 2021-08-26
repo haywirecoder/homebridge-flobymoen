@@ -5,7 +5,7 @@ const floengine = require("../flomain");
 
 class FloSmartWater {
  
- constructor(device, log, debug, Service, Characteristic, UUIDGen) {
+ constructor(flo, device, log, debug, Service, Characteristic, UUIDGen) {
     this.Characteristic = Characteristic;
     this.Service = Service;
     this.id = device.serialNumber;
@@ -16,7 +16,9 @@ class FloSmartWater {
     this.valueStatus = device.valveCurrentState;
     this.gallonsPerMin = 1;
     this.uuid = UUIDGen.generate(device.serialNumber);
-   
+    this.flo = flo;
+    this.flo.on(this.id, this.refreshState.bind(this));
+
     this.CURRENT_FLO_TO_HOMEKIT = {
       'OFF': Characteristic.SecuritySystemCurrentState.DISARMED,
       'HOME': Characteristic.SecuritySystemCurrentState.STAY_ARM,
@@ -41,6 +43,14 @@ class FloSmartWater {
     this.VALID_CURRENT_STATE_VALUES = [Characteristic.SecuritySystemCurrentState.STAY_ARM, Characteristic.SecuritySystemCurrentState.AWAY_ARM, Characteristic.SecuritySystemCurrentState.DISARMED, Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED];
     this.VALID_TARGET_STATE_VALUES = [Characteristic.SecuritySystemTargetState.STAY_ARM, Characteristic.SecuritySystemTargetState.AWAY_ARM, Characteristic.SecuritySystemTargetState.DISARM];
     
+  }
+
+
+  refreshState(eventData)
+  {
+    if (this.debug) this.log.debug(`Device updated requested: ` , eventData);
+    this.waterTemperature = eventData.device.temperature|| -270;
+    this.valueStatus = eventData.device.valveCurrentState;
   }
 
   identify(callback) {
@@ -114,7 +124,6 @@ async setTargetState(homekitState, callback) {
 // Handle requests to get the current temperature characteristic
 async getCurrentTemperature(callback) {
     // set this to a valid value for CurrentTemperature
-
     return callback(null,this.waterTemperature);
     
   }

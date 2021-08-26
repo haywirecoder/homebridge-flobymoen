@@ -19,12 +19,12 @@ class FloWaterSensor {
     this.flo.on(this.id, this.refreshState.bind(this));
   }
 
-  refreshState(event)
+  refreshState(eventData)
   {
-    if (this.debug) this.log.debug(`Device updated requested: ` , event);
-    this.currentTemperature = event.device.temperature|| -270;
-    this.currentHumidity = event.device.humidity || 0.0;
-    this.batteryLevel = event.device.batterylevel || 0;
+    if (this.debug) this.log.debug(`Device updated requested: ` , eventData);
+    this.currentTemperature = eventData.device.temperature|| -270;
+    this.currentHumidity = eventData.device.humidity || 0.0;
+    this.batteryLevel = eventData.device.batterylevel || 0;
 
   }
 
