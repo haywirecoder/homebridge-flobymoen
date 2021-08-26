@@ -48,8 +48,6 @@ class FlobyMoem extends EventEmitter {
         this.auth_token.username = config.auth.username;
         this.auth_token.password = config.auth.password;
         this.storagePath = storagePath;
-
-        
         
     };
 
@@ -74,9 +72,9 @@ class FlobyMoem extends EventEmitter {
         {
              // Set timer to obtain new token
              this.log.info("Using cache Flo token.");
-             let refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
+             var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
              this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} mins(s).`);
-             this.tokenRefreshHandle = setTimeout(() => this.refreshToken, refreshTimeoutmillis); 
+             this.tokenRefreshHandle = setTimeout(() => this.refreshToken(), refreshTimeoutmillis); 
               // Display temporary access 
             if (this.debug) this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
         
@@ -99,7 +97,8 @@ class FlobyMoem extends EventEmitter {
     };
 
     isLoggedIn() {
-        return (this.auth_token.token != undefined) && (Date.now() < this.auth_token.expiry);
+        let tokenExpiration = Math.floor(this.auth_token.expiry - Date.now());
+        return ((this.auth_token.token != undefined) && (tokenExpiration > -1));
     };
 
     async refreshToken() {
@@ -142,16 +141,16 @@ class FlobyMoem extends EventEmitter {
         } 
 
         // Set timer to obtain new token
-        let refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
+        var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
         // Display refreshing token information 
         this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} mins(s).`);
-        this.tokenRefreshHandle = setTimeout(() => this.refreshToken, refreshTimeoutmillis); 
-        return false;
+        this.tokenRefreshHandle = setTimeout(() => this.refreshToken(), refreshTimeoutmillis); 
+        return true;
         
     };
 
     // Discover and configure  that have been registered for this account. 
-      async  discoverDevices() {
+      async discoverDevices() {
 
          // Do we have a valid sessions? 
         if (!this.isLoggedIn()) {
@@ -260,7 +259,7 @@ class FlobyMoem extends EventEmitter {
 
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
-            this.log.error("User not login or token is invalid.")
+            this.log.error("Device Refresh Error: User not login or token is invalid.")
             return;
         }
         // Get device
@@ -272,10 +271,10 @@ class FlobyMoem extends EventEmitter {
 
             // Has the object been updated? If the device has not been heard from, no change is needed
             let deviceUpdateTime = new Date(device_info.data.lastHeardFromTime);
-            // if (deviceUpdateTime.getTime() == device.lastUpdate.getTime()) {
-            //     this.log.info(device.name + " has no updates.");
-            //     return true;
-            // }
+            if (deviceUpdateTime.getTime() == device.lastUpdate.getTime()) {
+                if (this.debug) this.log.debug(device.name + " has no updates.");
+                return true;
+            }
 
             // Update key information about device
             if (this.debug) this.log.debug("Device Updated Data: ", device_info);
@@ -319,7 +318,7 @@ class FlobyMoem extends EventEmitter {
 
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
-            this.log.error("User not login or token is invalid.")
+            this.log.error("Background Refresh Error: User not login or token is invalid.")
             return;
         }
         // clear device timer and begin refreshing device data

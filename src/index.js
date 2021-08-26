@@ -65,7 +65,7 @@ class FloByMoenPlatform {
     let currentDevice = this.flo.flo_devices[i];
     switch (currentDevice.type) {
         case FLO_SMARTWATER:
-          var smartWaterAccessory = new smartwater(currentDevice,this.log, this.debug, Service, Characteristic, UUIDGen);
+          var smartWaterAccessory = new smartwater(this.flo,currentDevice,this.log, this.debug, Service, Characteristic, UUIDGen);
           // check the accessory was not restored from cache
           var foundAccessory = this.accessories.find(accessory => accessory.UUID === smartWaterAccessory.uuid)
           if (!foundAccessory) {
