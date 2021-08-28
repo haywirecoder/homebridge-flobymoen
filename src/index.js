@@ -28,6 +28,7 @@ class FloByMoenPlatform {
     
    
     // Login in meetflo portal
+    this.log.info("Starting communication with Flo portal");
     this.initialLoad = this.flo.init().then ( () => {
       if (this.debug) this.log.debug('Initialization Successful.');
     }).catch(err => {
@@ -40,6 +41,7 @@ class FloByMoenPlatform {
       // When login completes discover devices with flo account
       this.initialLoad.then(() => {
           // Discover devices
+          this.log.info("Initiaizing Flo devices...")
           this.flo.discoverDevices().then (() => {
             
             // for (var i = 0; i < this.accessories.length; i++) 
@@ -47,8 +49,9 @@ class FloByMoenPlatform {
             //   this.log.info("Removing: ", i) 
             //   this.removeAccessory(this.accessories[i], false);}
               
-            // Once devices are discovered update Homekit assessories
-            this.refreshAccessories();
+          // Once devices are discovered update Homekit assessories
+          this.refreshAccessories();
+          this.log.info(`Flo device updates complete, background polling process started. Device will be polled each ${Math.floor((config.deviceRefresh / 60))} and min(s) ${Math.floor((config.deviceRefresh % 60))} second(s).`);      
         })
       })
     });
@@ -56,16 +59,15 @@ class FloByMoenPlatform {
 
   // Create associates in Homekit based on devices in flo account
   async refreshAccessories() {
-  if (this.debug) this.log.debug(`Initializing accessories`);
   
   // Process each flo devices and create accessories within the platform. smart water value and water sensor classes 
   // will handle the creation and setting callback for each device types.
-  this.log.info("Refreshing Accessories...")
+
   for (var i = 0; i < this.flo.flo_devices.length; i++) {
     let currentDevice = this.flo.flo_devices[i];
     switch (currentDevice.type) {
         case FLO_SMARTWATER:
-          var smartWaterAccessory = new smartwater(this.flo,currentDevice,this.log, this.debug, Service, Characteristic, UUIDGen);
+          var smartWaterAccessory = new smartwater(this.flo, currentDevice,this.log, this.debug, Service, Characteristic, UUIDGen);
           // check the accessory was not restored from cache
           var foundAccessory = this.accessories.find(accessory => accessory.UUID === smartWaterAccessory.uuid)
           if (!foundAccessory) {
@@ -96,10 +98,9 @@ class FloByMoenPlatform {
             waterAccessory.setAccessory(foundAccessory,false);
         break;
        }
-          
+       // Start background process to poll devices.
+       this.flo.startPollingProcess();
     }
-  this.log.info("Refreshing Accessories Complete.");
-  this.flo.backgroundRefresh();
   }
 
   //Add accessory to homekit dashboard
