@@ -2,6 +2,8 @@
 
 const floengine = require("../flomain");
 
+const FLO_VALVE_OPEN = 'open';
+const FLO_VALVE_CLOSE = 'close';
 
 class FloSmartWater {
  
@@ -14,31 +16,29 @@ class FloSmartWater {
     this.name = device.name;
     this.waterTemperature = device.temperature || -270;
     this.valueStatus = device.valveCurrentState;
+    this.systemCurrentState = device.systemCurrentState;
+    this.systemTargetState = device.systemTargetState;
+
     this.gallonsPerMin = 1;
     this.uuid = UUIDGen.generate(device.serialNumber);
     this.flo = flo;
     this.flo.on(this.id, this.refreshState.bind(this));
 
     this.CURRENT_FLO_TO_HOMEKIT = {
-      'OFF': Characteristic.SecuritySystemCurrentState.DISARMED,
-      'HOME': Characteristic.SecuritySystemCurrentState.STAY_ARM,
-      'AWAY': Characteristic.SecuritySystemCurrentState.AWAY_ARM,
-      'HOME_COUNT': Characteristic.SecuritySystemCurrentState.DISARMED,
-      'AWAY_COUNT': Characteristic.SecuritySystemCurrentState.DISARMED,
-      'ALARM_COUNT': Characteristic.SecuritySystemCurrentState.AWAY_ARM,
-      'ALARM': Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED
+      'sleep': Characteristic.SecuritySystemCurrentState.DISARMED,
+      'home': Characteristic.SecuritySystemCurrentState.STAY_ARM,
+      'away': Characteristic.SecuritySystemCurrentState.AWAY_ARM,
+      'alarm': Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED
     };
     this.TARGET_FLO_TO_HOMEKIT = {
-      'OFF': Characteristic.SecuritySystemTargetState.DISARM,
-      'HOME': Characteristic.SecuritySystemTargetState.STAY_ARM,
-      'AWAY': Characteristic.SecuritySystemTargetState.AWAY_ARM,
-      'HOME_COUNT': Characteristic.SecuritySystemTargetState.STAY_ARM,
-      'AWAY_COUNT': Characteristic.SecuritySystemTargetState.AWAY_ARM
+      'sleep': Characteristic.SecuritySystemTargetState.DISARM,
+      'home': Characteristic.SecuritySystemTargetState.STAY_ARM,
+      'away': Characteristic.SecuritySystemTargetState.AWAY_ARM,
     };
     this.TARGET_HOMEKIT_TO_FLO = {
-      [Characteristic.SecuritySystemTargetState.DISARM]: 'OFF',
-      [Characteristic.SecuritySystemTargetState.STAY_ARM]: 'HOME',
-      [Characteristic.SecuritySystemTargetState.AWAY_ARM]: 'AWAY'
+      [Characteristic.SecuritySystemTargetState.DISARM]: 'sleep',
+      [Characteristic.SecuritySystemTargetState.STAY_ARM]: 'home',
+      [Characteristic.SecuritySystemTargetState.AWAY_ARM]: 'away'
     };
     this.VALID_CURRENT_STATE_VALUES = [Characteristic.SecuritySystemCurrentState.STAY_ARM, Characteristic.SecuritySystemCurrentState.AWAY_ARM, Characteristic.SecuritySystemCurrentState.DISARMED, Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED];
     this.VALID_TARGET_STATE_VALUES = [Characteristic.SecuritySystemTargetState.STAY_ARM, Characteristic.SecuritySystemTargetState.AWAY_ARM, Characteristic.SecuritySystemTargetState.DISARM];
@@ -51,6 +51,18 @@ class FloSmartWater {
     if (this.debug) this.log.debug(`Device updated requested: ` , eventData);
     this.waterTemperature = eventData.device.temperature|| -270;
     this.valueStatus = eventData.device.valveCurrentState;
+    // get the leak sensor service to update status
+    this.service = this.accessory.getService(this.Service.SecuritySystem);
+    if(eventData.device.notifications.pending.criticalCount > 0) {
+      this.systemCurrentState = 'alarm';
+    }
+    else {
+      this.systemCurrentState = eventData.device.systemCurrentState;
+      this.systemTargetState = eventData.device.systemTargetState;
+    }
+    this.service.updateCharacteristic(this.Characteristic.SecuritySystemCurrentState, this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]);
+    this.service.updateCharacteristic(this.Characteristic.SecuritySystemTargetState, this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState]);
+
   }
 
   identify(callback) {
@@ -69,7 +81,6 @@ class FloSmartWater {
         .setCharacteristic(this.Characteristic.SerialNumber, this.id);
 
     this.service = this.accessory.getService(this.Service.SecuritySystem);
-
     this.service.getCharacteristic(this.Characteristic.SecuritySystemCurrentState)
         .setProps({ validValues: this.VALID_CURRENT_STATE_VALUES })
         .on('get', async callback => this.getCurrentState(callback));
@@ -103,19 +114,20 @@ class FloSmartWater {
 
 
   }
-
+// Handle requests to get the alarm states. Return index of alarm state
 async getCurrentState(callback) {
     
-    var currentValue = this.Characteristic.SecuritySystemCurrentState.DISARMED
+    var currentValue = this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState];
     return callback(null, currentValue);
   }
 
 async getTargetState(callback) {
  
-  var currentValue = this.Characteristic.SecuritySystemCurrentState.DISARMED
+  var currentValue = this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState];
     return callback(null, currentValue);
   }
 
+// Change smart water shutoff state.
 async setTargetState(homekitState, callback) {
 
     callback(null);
@@ -134,7 +146,7 @@ async getValveActive(callback) {
   var currentValue = this.Characteristic.Active.ACTIVE;
   // set this to a valid value for Active
   
-  if (!this.valueStatus) currentValue = this.Characteristic.Active.INACTIVE;
+  if (!this.valueStatus == FLO_VALVE_OPEN) currentValue = this.Characteristic.Active.INACTIVE;
 
   return callback(null, currentValue);
 }

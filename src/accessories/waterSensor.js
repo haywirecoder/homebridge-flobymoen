@@ -26,6 +26,20 @@ class FloWaterSensor {
     this.currentHumidity = eventData.device.humidity || 0.0;
     this.batteryLevel = eventData.device.batterylevel || 0;
 
+    // get the leak sensor service to update status
+    this.service = this.accessory.getService(this.Service.LeakSensor);
+    if(eventData.device.notifications.pending.criticalCount > 0) 
+    { 
+      leakDected = false; 
+      this.service.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
+    }
+     else  { 
+
+       leadDected = true;
+       this.service.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_DETECTED);
+    }
+
+
   }
 
   identify(callback) {
@@ -68,8 +82,6 @@ class FloWaterSensor {
      // create handlers for required characteristics
      this.service.getCharacteristic(this.Characteristic.CurrentRelativeHumidity)
      .on('get', async callback => this.getCurrentRelativeHumidity(callback));
- 
-
   }
 
   async getLeakStatus(callback) {
