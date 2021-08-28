@@ -24,7 +24,7 @@ class FloByMoenPlatform {
     this.accessories = [];
     this.api = api;  
     this.refreshInterval = config.deviceRefresh * 1000 || 30000;
-    this.flo = new floengine (log, config, this.debug, '/usr/local/lib/node_modules/homebridge-envisalink-ademco/');
+    this.flo = new floengine (log, config, this.debug);
     
    
     // Login in meetflo portal

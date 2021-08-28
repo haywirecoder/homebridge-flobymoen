@@ -12,16 +12,8 @@ const FLO_PRESENCE_HEARTBEAT = FLO_V2_API_BASE + '/presence/me';
 // Generic header for Safari macOS to interact with Flo api
 const FLO_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15';
 
-const FLO_HOME = 'home';
-const FLO_AWAY = 'away';
-const FLO_SLEEP = 'sleep';
 const FLO_WATERSENSOR ='puck_oem';
 const FLO_SMARTWATER = 'flo_device_v2';
-const FLO_MODES = [
-    FLO_HOME, 
-    FLO_AWAY, 
-    FLO_SLEEP 
-];
 
 class FlobyMoem extends EventEmitter {
     
@@ -33,11 +25,10 @@ class FlobyMoem extends EventEmitter {
     deviceRefreshHandle;
     alertRefreshHandle;
     deviceRefreshTime;
-    storagePath;
     log;
     debug;
 
-    constructor(log, config,debug,storagePath) {
+    constructor(log, config,debug) {
         super();
         this.log = log || console.log;
         this.debug = debug || console.debug;
@@ -47,15 +38,12 @@ class FlobyMoem extends EventEmitter {
         this.deviceRefreshTime = config.deviceRefresh * 1000 || 30000;
         this.auth_token.username = config.auth.username;
         this.auth_token.password = config.auth.password;
-        this.storagePath = storagePath;
         
     };
 
     async init() {
 
         // retrieve login storage login inoformation
-       
-        var promiseRefTokenHandle;
         // Initializes the storage
         await storage.init();
         // Get persist items, if exist...
@@ -66,7 +54,7 @@ class FlobyMoem extends EventEmitter {
         // If token not present or expired obtain new token
         if (!this.isLoggedIn()) {
                 // obtain new token
-                promiseRefTokenHandle = this.refreshToken();
+                await this.refreshToken();
         }
         else
         {
@@ -74,42 +62,40 @@ class FlobyMoem extends EventEmitter {
              this.log.info("Using cache Flo token.");
              var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
              this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} mins(s).`);
-             this.tokenRefreshHandle = setTimeout(() => this.refreshToken(), refreshTimeoutmillis); 
-              // Display temporary access 
+            // this.tokenRefreshHandle = setTimeout(() => this.refreshToken(), refreshTimeoutmillis); 
+            // Display temporary access 
             if (this.debug) this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
-        
-
-        }
-        // Wait for token to be obtain
-        const results = await Promise.all([promiseRefTokenHandle]);
-
-        // Build query header for future transactions
-        this.auth_token.header = {
+            // Build query header for future transactions
+            this.auth_token.header = {
             headers: {
                     'User-Agent': FLO_USER_AGENT,
                     'Content-Type': 'application/json;charset=UTF-8',
                     'Accept': 'application/json',
                     'authorization': this.auth_token.token
                     }
-        };
+            };
+        
+
+        }
         return true;
       
     };
 
     isLoggedIn() {
+        // determine time the elapse between now and token usage.
         let tokenExpiration = Math.floor(this.auth_token.expiry - Date.now());
-        return ((this.auth_token.token != undefined) && (tokenExpiration > -1));
+        return ((this.auth_token.token != undefined) && (tokenExpiration > 0));
     };
 
     async refreshToken() {
 
          // Do we have an outstanding timer for another refresh? 
          // Clear any existing timer
-        if (this.tokenRefreshHandle) 
-        {
-            clearTimeout(this.tokenRefreshHandle);
-            this.tokenRefreshHandle = null;
-        }
+        // if (this.tokenRefreshHandle) 
+        // {
+        //     clearTimeout(this.tokenRefreshHandle);
+        //     this.tokenRefreshHandle = null;
+        // }
         // Try to login using username and password to obtain a new token
         this.log.info("Refreshing Token...");
         
@@ -132,6 +118,15 @@ class FlobyMoem extends EventEmitter {
 
             // Display temporary access 
             if (this.debug) this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
+             // Build query header for future transactions
+            this.auth_token.header = {
+            headers: {
+                    'User-Agent': FLO_USER_AGENT,
+                    'Content-Type': 'application/json;charset=UTF-8',
+                    'Accept': 'application/json',
+                    'authorization': this.auth_token.token
+                    }
+            };
         
         }
         catch(err) {
@@ -144,7 +139,7 @@ class FlobyMoem extends EventEmitter {
         var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
         // Display refreshing token information 
         this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} mins(s).`);
-        this.tokenRefreshHandle = setTimeout(() => this.refreshToken(), refreshTimeoutmillis); 
+        ///this.tokenRefreshHandle = setTimeout(() => this.refreshToken(), refreshTimeoutmillis); 
         return true;
         
     };
@@ -153,9 +148,8 @@ class FlobyMoem extends EventEmitter {
       async discoverDevices() {
 
          // Do we have a valid sessions? 
-        if (!this.isLoggedIn()) {
-            this.log.error("User not login or token is invalid.")
-            return;
+         if (!this.isLoggedIn()) {
+            await this.refreshToken();
         }
         // Create path for locations listing
         var url = FLO_V2_API_BASE + "/users/" + this.auth_token.user_id + "?expand=locations";
@@ -222,11 +216,19 @@ class FlobyMoem extends EventEmitter {
     };
 
     async setSystemMode(newState) {
+        // Do we have valid sessions? 
+        if (!this.isLoggedIn()) {
+            await this.refreshToken();
+        }
 
     };
 
     async getSystemAlerts() {
         
+        // Do we have valid sessions? 
+        if (!this.isLoggedIn()) {
+            await refreshToken();
+        }
        
         var statusheader = { 'isInternalAlarm': 'false',
                    'locationId': this.flo_locations[0],
@@ -259,16 +261,14 @@ class FlobyMoem extends EventEmitter {
 
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
-            this.log.error("Device Refresh Error: User not login or token is invalid.")
-            return;
+            await this.refreshToken();
         }
         // Get device
         var url = FLO_V2_API_BASE + "/devices/" + device.deviceid;     
                
         try {
-            const device_response = await axios.get(url, this.auth_token.header);
-            var device_info = device_response;
-
+            var device_info = await axios.get(url, this.auth_token.header);
+            
             // Has the object been updated? If the device has not been heard from, no change is needed
             let deviceUpdateTime = new Date(device_info.data.lastHeardFromTime);
             if (deviceUpdateTime.getTime() == device.lastUpdate.getTime()) {
@@ -316,18 +316,17 @@ class FlobyMoem extends EventEmitter {
 
     async backgroundRefresh() {
 
+         // clear device timer and begin refreshing device data
+         if (this.deviceRefreshHandle) 
+         {
+             clearTimeout(this.deviceRefreshHandle);
+             this.deviceRefreshHandle = null;
+         }
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
-            this.log.error("Background Refresh Error: User not login or token is invalid.")
-            return;
+            // Token is expired or not login, start sessior with meetflo portal.
+            await this.refreshToken();
         }
-        // clear device timer and begin refreshing device data
-        if (this.deviceRefreshHandle) 
-        {
-            clearTimeout(this.deviceRefreshHandle);
-            this.deviceRefreshHandle = null;
-        }
-       
         // Updata all data elements
         for (var i = 0; i < this.flo_devices.length; i++) {
             let loc_device = this.flo_devices[i];
