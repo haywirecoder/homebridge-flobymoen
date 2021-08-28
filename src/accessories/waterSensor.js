@@ -21,22 +21,23 @@ class FloWaterSensor {
 
   refreshState(eventData)
   {
+    this.log.info(`Device updated requested: ` , eventData.device.name);
     if (this.debug) this.log.debug(`Device updated requested: ` , eventData);
-    this.currentTemperature = eventData.device.temperature|| -270;
+    this.currentTemperature = eventData.device.temperature || -270;
     this.currentHumidity = eventData.device.humidity || 0.0;
     this.batteryLevel = eventData.device.batterylevel || 0;
 
     // get the leak sensor service to update status
     this.service = this.accessory.getService(this.Service.LeakSensor);
-    if(eventData.device.notifications.pending.criticalCount > 0) 
+    if(eventData.device.notifications.criticalCount > 0) 
     { 
-      leakDected = false; 
-      this.service.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
+      this.leakDected = true; 
+      this.service.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_DETECTED);
     }
      else  { 
 
-       leadDected = true;
-       this.service.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_DETECTED);
+       this.leakDected = false;
+       this.service.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
     }
 
 

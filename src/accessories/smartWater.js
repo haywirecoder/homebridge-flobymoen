@@ -14,16 +14,13 @@ class FloSmartWater {
     this.log = log;
     this.debug = debug;
     this.name = device.name;
-    this.waterTemperature = device.temperature || -270;
-    this.valueStatus = device.valveCurrentState;
-    this.systemCurrentState = device.systemCurrentState;
+    this.valueStatus = device.valveTargetState;
+    // Current state does not provide correct state, using TargetState
+    // this.systemCurrentState = device.systemCurrentState;
+    this.systemCurrentState = device.systemTargetState;
     this.systemTargetState = device.systemTargetState;
-
-    this.gallonsPerMin = 1;
+    this.gallonsPerMin = device.gpm;
     this.uuid = UUIDGen.generate(device.serialNumber);
-    this.flo = flo;
-    this.flo.on(this.id, this.refreshState.bind(this));
-
     this.CURRENT_FLO_TO_HOMEKIT = {
       'sleep': Characteristic.SecuritySystemCurrentState.DISARMED,
       'home': Characteristic.SecuritySystemCurrentState.STAY_ARM,
@@ -43,23 +40,29 @@ class FloSmartWater {
     this.VALID_CURRENT_STATE_VALUES = [Characteristic.SecuritySystemCurrentState.STAY_ARM, Characteristic.SecuritySystemCurrentState.AWAY_ARM, Characteristic.SecuritySystemCurrentState.DISARMED, Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED];
     this.VALID_TARGET_STATE_VALUES = [Characteristic.SecuritySystemTargetState.STAY_ARM, Characteristic.SecuritySystemTargetState.AWAY_ARM, Characteristic.SecuritySystemTargetState.DISARM];
     
+    this.flo = flo;
+    this.flo.on(this.id, this.refreshState.bind(this));
   }
 
 
   refreshState(eventData)
   {
+    this.log.info(`Device updated requested: ` , eventData.device.name);
     if (this.debug) this.log.debug(`Device updated requested: ` , eventData);
-    this.waterTemperature = eventData.device.temperature|| -270;
-    this.valueStatus = eventData.device.valveCurrentState;
+    this.valueStatus = eventData.device.valveTargetState;
+    this.gallonsPerMin = eventData.device.gpm;
     // get the leak sensor service to update status
     this.service = this.accessory.getService(this.Service.SecuritySystem);
-    if(eventData.device.notifications.pending.criticalCount > 0) {
+    if(eventData.device.notifications.criticalCount > 0) {
       this.systemCurrentState = 'alarm';
     }
     else {
-      this.systemCurrentState = eventData.device.systemCurrentState;
+      // Current state does not provide correct state, using TargetState
+      // this.systemCurrentState = eventData.device.systemCurrentState;
+      this.systemCurrentState = eventData.device.systemTargetState;
       this.systemTargetState = eventData.device.systemTargetState;
     }
+  
     this.service.updateCharacteristic(this.Characteristic.SecuritySystemCurrentState, this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]);
     this.service.updateCharacteristic(this.Characteristic.SecuritySystemTargetState, this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState]);
 
@@ -89,14 +92,6 @@ class FloSmartWater {
         .on('get', async callback => this.getTargetState(callback))
         .on('set', async (state, callback) => this.setTargetState(state, callback));
 
-
-    // Add temperature sensor
-    if (isNew) this.accessory.addService(this.Service.TemperatureSensor);  
-    this.service = this.accessory.getService(this.Service.TemperatureSensor);
-    // create handlers for required characteristics
-    this.service.getCharacteristic(this.Characteristic.CurrentTemperature)
-    .on('get', async callback => this.getCurrentTemperature(callback));
-
     // create a new Valve service
     if (isNew) this.accessory.addService(this.Service.Valve);  
     this.service = this.accessory.getService(this.Service.Valve);
@@ -116,14 +111,12 @@ class FloSmartWater {
   }
 // Handle requests to get the alarm states. Return index of alarm state
 async getCurrentState(callback) {
-    
     var currentValue = this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState];
     return callback(null, currentValue);
   }
 
 async getTargetState(callback) {
- 
-  var currentValue = this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState];
+    var currentValue = this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState];
     return callback(null, currentValue);
   }
 
@@ -131,13 +124,6 @@ async getTargetState(callback) {
 async setTargetState(homekitState, callback) {
 
     callback(null);
-  }
-
-// Handle requests to get the current temperature characteristic
-async getCurrentTemperature(callback) {
-    // set this to a valid value for CurrentTemperature
-    return callback(null,this.waterTemperature);
-    
   }
 
 // Handle requests to get the current value of the "Active" characteristic
@@ -179,10 +165,6 @@ async getValveFault(callback) {
   var currentValue = this.Characteristic.StatusFault.NO_FAULT;
   return callback(null, currentValue);
 }
-
- async refreshState() {
-    
-  }
 
 }
 
