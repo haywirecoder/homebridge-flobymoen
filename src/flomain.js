@@ -169,6 +169,7 @@ class FlobyMoem extends EventEmitter {
                         try {
                             const device_response = await axios.get(url, this.auth_token.header);
                             var device_info = device_response;
+                            if (this.debug) this.log.debug("Device Raw Data: ", device_info.data);
                             // create flo device object
                             var device = {};
                             // Store key information about device
@@ -178,12 +179,12 @@ class FlobyMoem extends EventEmitter {
                             device.serialNumber = device_info.data.serialNumber;
                             device.location = device_info.data.location.id;
                             device.deviceid = device_info.data.id;
-                            device.temperature = device_info.data.telemetry.current.tempF;
                             device.notifications = device_info.data.notifications.pending;
                             device.lastUpdate = new Date(device_info.data.lastHeardFromTime);
                             // determine type of device and set proper data elements
                             switch (device_info.data.deviceType) {
                                 case FLO_WATERSENSOR:
+                                    device.temperature = device_info.data.telemetry.current.tempF;
                                     device.humidity = device_info.data.telemetry.current.humidity;
                                     // Return whether water is detected, for leak detectors.
                                     device.waterdetect = device_info.data.fwProperties.telemetry_water;
@@ -192,6 +193,7 @@ class FlobyMoem extends EventEmitter {
                                     break;
                                 case FLO_SMARTWATER:
                                     device.psi = device_info.data.telemetry.current.psi;
+                                    device.gpm = device_info.data.telemetry.current.gpm;
                                     device.systemCurrentState = device_info.data.systemMode.lastKnown;
                                     device.systemTargetState = device_info.data.systemMode.target;
                                     device.valveCurrentState = device_info.data.valve.lastKnown;
@@ -267,6 +269,7 @@ class FlobyMoem extends EventEmitter {
         var url = FLO_V2_API_BASE + "/devices/" + device.deviceid;     
                
         try {
+
             var device_info = await axios.get(url, this.auth_token.header);
             
             // Has the object been updated? If the device has not been heard from, no change is needed
@@ -275,17 +278,16 @@ class FlobyMoem extends EventEmitter {
                 if (this.debug) this.log.debug(device.name + " has no updates.");
                 return true;
             }
-
             // Update key information about device
-            if (this.debug) this.log.debug("Device Updated Data: ", device_info);
+            if (this.debug) this.log.debug("Device Updated Data: ", device_info.data);
 
             device.lastUpdate = new Date(device_info.data.lastHeardFromTime);
-            device.temperature = device_info.data.telemetry.current.tempF;
             device.notifications = device_info.data.notifications.pending;
-
+        
             // determine type of device and update the proper data elements
             switch (device.type) {
                 case FLO_WATERSENSOR:
+                    device.temperature = device_info.data.telemetry.current.tempF;
                     device.humidity = device_info.data.telemetry.current.humidity;
                     // Return whether water is detected, for leak detectors.
                     device.waterdetect = device_info.data.fwProperties.telemetry_water;
@@ -294,12 +296,14 @@ class FlobyMoem extends EventEmitter {
                 break;
                 case FLO_SMARTWATER:
                     device.psi = device_info.data.telemetry.current.psi;
+                    device.gpm = device_info.data.telemetry.current.gpm;
                     device.systemCurrentState = device_info.data.systemMode.lastKnown;
                     device.systemTargetState = device_info.data.systemMode.target;
                     device.valveCurrentState = device_info.data.valve.lastKnown;
                     device.valveTargetState = device_info.data.valve.target;
                 break;
             } 
+           
             // change were detected updata device data elements and trigger updata.
             this.emit(device.serialNumber, {
                 device: device
@@ -317,6 +321,7 @@ class FlobyMoem extends EventEmitter {
     async backgroundRefresh() {
 
          // clear device timer and begin refreshing device data
+       
          if (this.deviceRefreshHandle) 
          {
              clearTimeout(this.deviceRefreshHandle);
@@ -328,10 +333,10 @@ class FlobyMoem extends EventEmitter {
             await this.refreshToken();
         }
         // Updata all data elements
+        var loc_device;
         for (var i = 0; i < this.flo_devices.length; i++) {
-            let loc_device = this.flo_devices[i];
-            this.refreshDevice(loc_device).then ( dev_result => {                
-            })
+            loc_device = this.flo_devices[i];
+            await this.refreshDevice(loc_device);
         }
        
         // Set timer to refresh devices
