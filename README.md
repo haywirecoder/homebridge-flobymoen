@@ -18,6 +18,7 @@ An Homebridge plugin to integrate the Flo by Moen 3 water system with HomeKit. T
 | deviceRefresh        | Polling interval to obtain status of Flo devices. Default to 1 mins. Please note: Small values may cause account lock or frequent API to errors.                                                                    |
 | sleepRevertMinutes          | When Smart Water Shutoff Value is put into sleep what amount of time before it reverted back to previous mode (away or home).                                                                           |
 
+
 Example configuration is below.
 
 ```javascript
