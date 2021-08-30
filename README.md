@@ -32,7 +32,7 @@ Example configuration is below.
     }
     "deviceRefresh": 60,
     "sleepRevertMinutes": 120,
-    "platform": "Flo-by-Moen",
+    "platform": "Flo-by-Moen"
 }
 ...
 
