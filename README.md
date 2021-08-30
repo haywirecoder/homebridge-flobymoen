@@ -11,7 +11,7 @@ An Homebridge plugin to integrate the Flo by Moen 3 water system with HomeKit. T
 
 ## Limitation:
 * This module works with Smart Water Shutoff and Water sensors only. It does not support the recently release Flo Smart Water Faucets.
-* This module will poll for the status of the various compoments. No realtime notification is provided
+* This module will poll for the status of the various compoments. No realtime notification is provided.
  
 ## TODO:
 * Add support for turn-off Smart Water Shutoff valve using the valve control.
