@@ -7,7 +7,19 @@
 
 
 # Homebridge Plugin Flo by Moen (In-Development)
-An Homebridge plugin to integrate the Flo by Moen 3 water system with HomeKit. This plug-in manages the Flo smart water kit monitoring and control devices via the Flo unofficial cloud API. It leverage work done by aioflo Python3 library https://github.com/bachya/aioflo. This module use This module interact with the Smart Water Shutoff and Water sensors only. It does not support the recently release Flo Smart Water Faucets. 
+An Homebridge plugin to integrate the Flo by Moen 3 water system with HomeKit. This plugin manages the Flo smart water kit monitoring and control devices via the Flo unofficial cloud API. This module leverage work done by aioflo Python3 library https://github.com/bachya/aioflo development team. 
+
+## Limitation:
+* This module works with Smart Water Shutoff and Water sensors only. It does not support the recently release Flo Smart Water Faucets.
+* This module will poll for the status of the various compoments. No realtime notification is provided
+ 
+## TODO:
+* Add support for turn-off Smart Water Shutoff valve using the valve control.
+* Using the current state to return for revert back for sleep mode.
+* Expose compomnent to start a "Health Check".
+* Obtain homebridge vertification for module.  
+
+
 ## Configuration options
 
 | Attributes        | Description                                                                                                              |
