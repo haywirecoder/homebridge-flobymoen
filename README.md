@@ -6,7 +6,7 @@
 </p>
 
 
-# Homebridge Plugin Flo by Moen (In-Development)
+# Homebridge Plugin Flo by Moen (Beta)
 An Homebridge plugin to integrate the Flo by Moen 3 water system with HomeKit. This plugin manages the Flo smart water kit monitoring and control devices via the Flo unofficial cloud API. This module leverage work done by aioflo Python3 library https://github.com/bachya/aioflo development team. 
 
 ## Limitation:
