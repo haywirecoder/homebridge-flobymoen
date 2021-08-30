@@ -29,7 +29,7 @@ Example configuration is below.
     "auth" : {
       "username": "<username>",
       "password": "<password>"
-    }
+    },
     "deviceRefresh": 60,
     "sleepRevertMinutes": 120,
     "platform": "Flo-by-Moen"
