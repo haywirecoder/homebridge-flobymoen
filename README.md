@@ -18,6 +18,7 @@ An Homebridge plugin to integrate the Flo by Moen 3 water system with HomeKit. T
 * Using the current state to return for revert back for sleep mode.
 * Expose compomnent to start a "Health Check".
 * Obtain homebridge vertification for module.  
+* Add ability to excluded devices.
 
 
 ## Configuration options
