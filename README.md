@@ -1,4 +1,5 @@
 
+[![NPM Version](https://img.shields.io/npm/v/homebridge-flobymoen.svg)](https://www.npmjs.com/package/homebridge-flobymoen)
 <p align="center">
 
 <img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
