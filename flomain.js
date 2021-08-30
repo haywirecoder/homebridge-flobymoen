@@ -36,6 +36,7 @@ class FlobyMoem extends EventEmitter {
         this.deviceRefreshHandle = null;
         this.alertRefreshHandle = null;
         this.deviceRefreshTime = config.deviceRefresh * 1000 || 30000;
+        this.sleepRevertMinutes = config.sleepRevertMinutes || 120;
         this.auth_token.username = config.auth.username;
         this.auth_token.password = config.auth.password;
         
@@ -58,10 +59,10 @@ class FlobyMoem extends EventEmitter {
         }
         else
         {
-             // Set timer to obtain new token
-             this.log.info("Using cache Flo token.");
-             var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
-             this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
+            // Set timer to obtain new token
+            this.log.info("Using cache Flo token.");
+            var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
+            this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
             // this.tokenRefreshHandle = setTimeout(() => this.refreshToken(), refreshTimeoutmillis); 
             // Display temporary access 
             if (this.debug) this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
@@ -94,16 +95,10 @@ class FlobyMoem extends EventEmitter {
         return ((this.auth_token.token != undefined) && (tokenExpiration > 0));
     };
 
+    // After login Flo system returns a token that used for all transaction. This topic must be periodically refresh
+    // This method login, gets the token and store for later transaction.
     async refreshToken() {
 
-         // Do we have an outstanding timer for another refresh? 
-         // Clear any existing timer
-        // if (this.tokenRefreshHandle) 
-        // {
-        //     clearTimeout(this.tokenRefreshHandle);
-        //     this.tokenRefreshHandle = null;
-        // }
-        // Try to login using username and password to obtain a new token
         this.log.info("Refreshing Token...");
         
         try {
@@ -224,12 +219,81 @@ class FlobyMoem extends EventEmitter {
 
     };
 
-    async setSystemMode(newState) {
+    // Change/set Flo system in three mode home, away and sleep. Refer to link below for each mode.
+    // https://support.meetflo.com/hc/en-us/articles/115003927993-What-s-the-difference-between-Home-Away-and-Sleep-modes-
+    async setSystemMode(location, mode) {
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
             await this.refreshToken();
         }
+        var url = FLO_V2_API_BASE + "/locations/" + location + "/systemMode";
+        var modeRequestbody = {
+            'target': mode,
+        };
+        if (mode == "sleep")
+        {
+           // revertMinutes -- The number of minutes to sleep (120, 1440, or 4320)
+           modeRequestbody.revertMinutes = this.sleepRevertMinutes;
+           // revertMode -- Time to remain in sleep and mode to set after sleep concludes ("away" or "home")
+           // preset to always home.
+           modeRequestbody.revertMode = 'home';
+        }
 
+        // Change monitor mode based on request
+        var response;
+        try {
+            response = await axios.post(url, modeRequestbody, this.auth_token.header);
+            this.log.info("System Monitoring mode change to : " , mode);
+            if (this.debug) this.log.debug(response);
+        } catch(err)
+        {
+            this.log.error("Error: " + err.message);
+        }
+       
+    };
+    async setValue(device, mode) {
+        // Do we have valid sessions? 
+        if (!this.isLoggedIn()) {
+            await this.refreshToken();
+        }
+        var url = FLO_V2_API_BASE + "/devices/" + device.deviceid;
+
+        var modeRequestbody = {
+            valve: {
+                'target': mode,
+            }
+        };
+        // Change value state
+        var response;
+        try {
+            response = await axios.post(url, modeRequestbody, this.auth_token.header);
+            this.log.info("Flo Device now: " , mode);
+            if (this.debug) this.log.debug(response);
+        } catch(err)
+        {
+            this.log.error("Error: " + err.message);
+        }
+       
+    };
+
+    async runHealthCheck(device) {
+        // Do we have valid sessions? 
+        if (!this.isLoggedIn()) {
+            await this.refreshToken();
+        }
+        var url = FLO_V2_API_BASE + "/devices/" + device.deviceid + "/healthTest/run";
+
+        // Change monitor mode based on request
+        var response;
+        try {
+            this.log.info("Running Health Check.");
+            response = await axios.post(url,"", this.auth_token.header);
+            if (this.debug) this.log.debug(response);
+        } catch(err)
+        {
+            this.log.error("Error: " + err.message);
+        }
+       
     };
 
     async getSystemAlerts() {
@@ -243,7 +307,7 @@ class FlobyMoem extends EventEmitter {
                    'locationId': this.flo_locations[0],
                    'status': 'triggered',
                    'severity': 'warning', 
-                   //'severity': 'critical',
+                   'severity': 'critical',
                    'page': 1,
                    'size': 100
         }
@@ -255,15 +319,15 @@ class FlobyMoem extends EventEmitter {
         this.log.info(systemstatusheader);
 
         
-        var url = FLO_V2_API_BASE + "/alerts";
-        try {
-            const alarm_response = await axios.get(url, systemstatusheader);
-            this.log.info(alarm_response.data);
-        }
-        catch (err)
-        {
-            this.log.error("Getting Alerts Error:  " + err.message);
-        }
+        // var url = FLO_V2_API_BASE + "/alerts";
+        // try {
+        //     const alarm_response = await axios.get(url, systemstatusheader);
+        //     this.log.info(alarm_response.data);
+        // }
+        // catch (err)
+        // {
+        //     this.log.error("Getting Alerts Error:  " + err.message);
+        // }
     };
 
     async refreshDevice(device) {
@@ -386,7 +450,7 @@ class FlobyMoem extends EventEmitter {
     }
    InAlertsStatus(device)
     {
-        if ((device.notifications.pending.warningCount > 0) ||  (device.notifications.pending.criticalCount > 0)) 
+        if (device.notifications.pending.criticalCount > 0)
             return true;
         else    
             return false;

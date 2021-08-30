@@ -51,7 +51,7 @@ class FloByMoenPlatform {
               
           // Once devices are discovered update Homekit assessories
           this.refreshAccessories();
-          this.log.info(`Flo device updates complete, background polling process started. Device will be polled each ${Math.floor((config.deviceRefresh / 60))} and min(s) ${Math.floor((config.deviceRefresh % 60))} second(s).`);      
+          this.log.info(`Flo device updates complete, background polling process started.\n Device will be polled each ${Math.floor((config.deviceRefresh / 60))} min(s) ${Math.floor((config.deviceRefresh % 60))} second(s).`);      
         })
       })
     });
