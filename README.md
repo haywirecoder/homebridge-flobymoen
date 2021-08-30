@@ -39,8 +39,8 @@ Example configuration is below.
 {
     "name": "Flo-by-Moen",
     "auth" : {
-      "username": "<username>",
-      "password": "<password>"
+      "username": <username>,
+      "password": <password>
     },
     "deviceRefresh": 60,
     "sleepRevertMinutes": 120,
