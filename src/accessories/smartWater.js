@@ -3,7 +3,7 @@
 const floengine = require("../flomain");
 
 const FLO_VALVE_OPEN = 'open';
-const FLO_VALVE_CLOSE = 'close';
+const FLO_VALVE_CLOSE = 'closed';
 
 class FloSmartWater {
  
@@ -14,6 +14,7 @@ class FloSmartWater {
     this.log = log;
     this.debug = debug;
     this.name = device.name;
+    this.location = device.location;
     this.valueStatus = device.valveTargetState;
     // Current state does not provide correct state, using TargetState
     // this.systemCurrentState = device.systemCurrentState;
@@ -35,7 +36,8 @@ class FloSmartWater {
     this.TARGET_HOMEKIT_TO_FLO = {
       [Characteristic.SecuritySystemTargetState.DISARM]: 'sleep',
       [Characteristic.SecuritySystemTargetState.STAY_ARM]: 'home',
-      [Characteristic.SecuritySystemTargetState.AWAY_ARM]: 'away'
+      [Characteristic.SecuritySystemTargetState.AWAY_ARM]: 'away',
+      [Characteristic.SecuritySystemCurrentState.NIGHT_ARM]: 'home' // Night mode should never occur, but as a safety precaution.
     };
     this.VALID_CURRENT_STATE_VALUES = [Characteristic.SecuritySystemCurrentState.STAY_ARM, Characteristic.SecuritySystemCurrentState.AWAY_ARM, Characteristic.SecuritySystemCurrentState.DISARMED, Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED];
     this.VALID_TARGET_STATE_VALUES = [Characteristic.SecuritySystemTargetState.STAY_ARM, Characteristic.SecuritySystemTargetState.AWAY_ARM, Characteristic.SecuritySystemTargetState.DISARM];
@@ -120,9 +122,11 @@ async getTargetState(callback) {
     return callback(null, currentValue);
   }
 
-// Change smart water shutoff state.
+// Change smart water shutoff monitoring state.
 async setTargetState(homekitState, callback) {
-
+    this.flo.setSystemMode(this.location, this.TARGET_HOMEKIT_TO_FLO[homekitState]);
+    this.systemCurrentState = this.TARGET_HOMEKIT_TO_FLO[homekitState];
+    this.systemTargetState = this.TARGET_HOMEKIT_TO_FLO[homekitState];
     callback(null);
   }
 
