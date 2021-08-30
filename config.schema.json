@@ -36,9 +36,35 @@
         "deviceRefresh": {
         "title": "Device Refresh Interval",
         "type": "integer",
-        "default": 30,
-        "description": "Poll interval to obtain device updates in seconds. <b>Please note:</b> A very aggressive value may cause lockout to your account.",
-        "minimum": 5
+        "default": 60,
+        "description": "Poll interval to obtain device updates in seconds. <b>Please note:</b> A very low value may cause lockout to your account.",
+        "minimum": 15,
+        "maximum": 3600
+      },
+        "sleepRevertMinutes": {
+        "title": "Sleep Time",
+        "type": "integer",
+        "default": 120,
+        "description": "Sleep Mode is a system mode that quiets all monitoring and alerting, effectively putting the Flo System to sleep. This value represents the lenght of time to place the system sleep mode.",
+        "oneOf": [{
+          "title": "2 Hours",
+          "enum": [
+            120
+          ]
+        },
+        {
+          "title": "24 Hours",
+          "enum": [
+           1440
+          ]
+        },
+        {
+          "title": "72 Hours",
+          "enum": [
+            4320
+          ]
+        }
+        ] 
       },
       "excludedDevices": {
         "type": "array",
@@ -66,6 +92,7 @@
           "description": "To see all messages the Homebridge debug (<code>-D</code>) option must also be enabled. <small>See <a target='_blank' href='https://github.com/homebridge/homebridge-raspbian-image/wiki/How-To-Enable-Debug-or-Insecure-Mode'>https://github.com/homebridge/homebridge-raspbian-image/wiki/How-To-Enable-Debug-or-Insecure-Mode</a></small>"
         },
         "deviceRefresh",
+        "sleepRevertMinutes",
         {
           "key": "excludedDevices",
           "title": "Excluded Devices",
