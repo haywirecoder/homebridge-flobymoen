@@ -29,9 +29,9 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | username              | Flo Moen username                     |
 | password              | Flo Moen password                                                                  |
-| deviceRefresh        | Polling interval to obtain status of Flo devices, provide in seconds. Default to 1 mins. Please note: Small values may cause account lock or frequent API to errors.                                                                    |
-| sleepRevertMinutes          | When Smart Water Shutoff Value is put into sleep what amount of time before it reverted back to previous mode (away or home).  time provided in minutes. Default to 120 mins (2 hours).      
-| enableValveCntrl          | Enable Homekit to control the Smart Water Shutoff valve. Default false   |
+| deviceRefresh        | Polling interval to obtain status of Flo devices, provide in seconds. Default to <i>60</i> seconds. Please note: Small values may cause account lock or frequent API to errors.                                                                    |
+| sleepRevertMinutes          | When Smart Water Shutoff Value is put into sleep what amount of time before it reverted back to previous mode (away or home).  Time value is provided in minutes. Default to <i>120</i> mins (2 hours).      
+| enableValveCntrl          | Enable Homekit to control the Smart Water Shutoff valve. Default to <i>false</i>   |
 
 
 Example configuration is below.
