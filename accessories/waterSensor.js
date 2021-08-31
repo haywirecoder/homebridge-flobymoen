@@ -21,7 +21,6 @@ class FloWaterSensor {
 
   refreshState(eventData)
   {
-    this.log.info(`Device updated requested: ` , eventData.device.name);
     if (this.debug) this.log.debug(`Device updated requested: ` , eventData);
     this.currentTemperature = eventData.device.temperature || -270;
     this.currentHumidity = eventData.device.humidity || 0.0;
