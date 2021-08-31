@@ -16,11 +16,11 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 * This module will poll for the status of the various compoments. No realtime notification is provided.
  
 ## TODO:
-* Add support for turn-off Smart Water Shutoff valve using the valve control.
-* Using the current state to return for revert back for sleep mode.
-* Expose compomnent to start a "Health Check".
-* Obtain homebridge vertification for module.  
+
+* Expose button to start a "Health Check".
 * Add ability to excluded devices.
+* Cleanup of cache devices
+* Obtain homebridge vertification for module. 
 
 
 ## Configuration options
@@ -30,7 +30,8 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 | username              | Flo Moen username                     |
 | password              | Flo Moen password                                                                  |
 | deviceRefresh        | Polling interval to obtain status of Flo devices, provide in seconds. Default to 1 mins. Please note: Small values may cause account lock or frequent API to errors.                                                                    |
-| sleepRevertMinutes          | When Smart Water Shutoff Value is put into sleep what amount of time before it reverted back to previous mode (away or home).  time provided in minutes. Default to 120 mins (2 hours).                                                                          |
+| sleepRevertMinutes          | When Smart Water Shutoff Value is put into sleep what amount of time before it reverted back to previous mode (away or home).  time provided in minutes. Default to 120 mins (2 hours).      
+| enableValveCntrl          | Enable Homekit to control the Smart Water Shutoff valve. Default false   |
 
 
 Example configuration is below.
@@ -45,6 +46,7 @@ Example configuration is below.
       "username": <username>,
       "password": <password>
     },
+    "enableValveCntrl": false,
     "deviceRefresh": 60,
     "sleepRevertMinutes": 120,
     "platform": "Flo-by-Moen"
