@@ -24,6 +24,7 @@ class FloByMoenPlatform {
     this.accessories = [];
     this.api = api;  
     this.refreshInterval = config.deviceRefresh * 1000 || 30000;
+    this.valveControl = config.enableValveCntrl || false;
     this.flo = new floengine (log, config, this.debug);
     
    
@@ -51,7 +52,7 @@ class FloByMoenPlatform {
               
           // Once devices are discovered update Homekit assessories
           this.refreshAccessories();
-          this.log.info(`Flo device updates complete, background polling process started.\n Device will be polled each ${Math.floor((config.deviceRefresh / 60))} min(s) ${Math.floor((config.deviceRefresh % 60))} second(s).`);      
+          this.log.info(`Flo device updates complete, background polling process started.\nDevice will be polled each ${Math.floor((config.deviceRefresh / 60))} min(s) ${Math.floor((config.deviceRefresh % 60))} second(s).`);      
         })
       })
     });
@@ -67,7 +68,7 @@ class FloByMoenPlatform {
     let currentDevice = this.flo.flo_devices[i];
     switch (currentDevice.type) {
         case FLO_SMARTWATER:
-          var smartWaterAccessory = new smartwater(this.flo, currentDevice,this.log, this.debug, Service, Characteristic, UUIDGen);
+          var smartWaterAccessory = new smartwater(this.flo, currentDevice,this.log, this.debug, this.valveControl, Service, Characteristic, UUIDGen);
           // check the accessory was not restored from cache
           var foundAccessory = this.accessories.find(accessory => accessory.UUID === smartWaterAccessory.uuid)
           if (!foundAccessory) {

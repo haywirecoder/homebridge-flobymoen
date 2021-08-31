@@ -39,6 +39,7 @@ class FlobyMoem extends EventEmitter {
         this.sleepRevertMinutes = config.sleepRevertMinutes || 120;
         this.auth_token.username = config.auth.username;
         this.auth_token.password = config.auth.password;
+        this.IsBusy = false;
         
     };
 
@@ -221,11 +222,16 @@ class FlobyMoem extends EventEmitter {
 
     // Change/set Flo system in three mode home, away and sleep. Refer to link below for each mode.
     // https://support.meetflo.com/hc/en-us/articles/115003927993-What-s-the-difference-between-Home-Away-and-Sleep-modes-
-    async setSystemMode(location, mode) {
+    async setSystemMode(location, mode, revertMode) {
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
             await this.refreshToken();
         }
+        if (this.IsBusy) {
+            this.info.warn("System Mode: Another process is already updating the Flo system.")
+            return;
+        }
+        this.IsBusy = true;
         var url = FLO_V2_API_BASE + "/locations/" + location + "/systemMode";
         var modeRequestbody = {
             'target': mode,
@@ -236,7 +242,7 @@ class FlobyMoem extends EventEmitter {
            modeRequestbody.revertMinutes = this.sleepRevertMinutes;
            // revertMode -- Time to remain in sleep and mode to set after sleep concludes ("away" or "home")
            // preset to always home.
-           modeRequestbody.revertMode = 'home';
+           modeRequestbody.revertMode = revertMode;
         }
 
         // Change monitor mode based on request
@@ -249,30 +255,37 @@ class FlobyMoem extends EventEmitter {
         {
             this.log.error("Error: " + err.message);
         }
+        this.IsBusy = false;
        
     };
-    async setValue(device, mode) {
+    async setValue(deviceid, mode) {
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
             await this.refreshToken();
         }
-        var url = FLO_V2_API_BASE + "/devices/" + device.deviceid;
+        if (this.IsBusy) {
+            this.info.warn("System Mode: Another process is already updating the Flo system.")
+            return;
+        }
+        this.IsBusy = true;
+        var url = FLO_V2_API_BASE + "/devices/" + deviceid;
 
         var modeRequestbody = {
             valve: {
-                'target': mode,
+                'target': mode
             }
         };
         // Change value state
         var response;
         try {
             response = await axios.post(url, modeRequestbody, this.auth_token.header);
-            this.log.info("Flo Device now: " , mode);
+            this.log.info("Flo valve now: " , mode);
             if (this.debug) this.log.debug(response);
         } catch(err)
         {
             this.log.error("Error: " + err.message);
         }
+        this.IsBusy = false;
        
     };
 
@@ -398,6 +411,11 @@ class FlobyMoem extends EventEmitter {
              clearTimeout(this.deviceRefreshHandle);
              this.deviceRefreshHandle = null;
          }
+         if (this.IsBusy) {
+            this.info.warn("Device Update: Another process is already updating the Flo system.\n Skipping Interval Update.")
+            this.deviceRefreshHandle = setTimeout(() => this.backgroundRefresh(), this.deviceRefreshTime); 
+            return;
+        }
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
             // Token is expired or not login, start sessior with meetflo portal.
