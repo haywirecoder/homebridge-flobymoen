@@ -18,8 +18,6 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 ## TODO:
 
 * Expose a button to start a "Health Check".
-* Add ability to excluded devices.
-* Cleanup of cache devices.
 * Obtain homebridge vertification for module. 
 
 
