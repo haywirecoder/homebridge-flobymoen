@@ -44,7 +44,7 @@ Example configuration is below.
       "username": <username>,
       "password": <password>
     },
-    "enableValveCntrl": false,
+    "enableValveControl": false,
     "deviceRefresh": 60,
     "sleepRevertMinutes": 120,
     "platform": "Flo-by-Moen"
