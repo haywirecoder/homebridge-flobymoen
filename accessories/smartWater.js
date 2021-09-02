@@ -7,7 +7,7 @@ const FLO_VALVE_CLOSE = 'closed';
 
 class FloSmartWater {
  
- constructor(flo, device, log, debug, valveControl, Service, Characteristic, UUIDGen) {
+ constructor(flo, device, log, debug, config, Service, Characteristic, UUIDGen) {
     this.Characteristic = Characteristic;
     this.Service = Service;
     this.log = log;
@@ -42,7 +42,8 @@ class FloSmartWater {
     };
     this.VALID_CURRENT_STATE_VALUES = [Characteristic.SecuritySystemCurrentState.STAY_ARM, Characteristic.SecuritySystemCurrentState.AWAY_ARM, Characteristic.SecuritySystemCurrentState.DISARMED, Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED];
     this.VALID_TARGET_STATE_VALUES = [Characteristic.SecuritySystemTargetState.STAY_ARM, Characteristic.SecuritySystemTargetState.AWAY_ARM, Characteristic.SecuritySystemTargetState.DISARM];
-    this.IsValveControlEnabled = valveControl || false;
+    this.IsValveControlEnabled = config.enableValveCntrl || false;
+    this.IsHealthSwitchEnabled = config.enableHealthSwitch || false;
     this.flo = flo;
     this.flo.on(this.id, this.refreshState.bind(this));
   }
@@ -109,6 +110,14 @@ class FloSmartWater {
     this.service.getCharacteristic(this.Characteristic.StatusFault)
         .on('get', async callback => this.getValveFault(callback));
 
+    // Create Health test switch
+    if (this.IsHealthSwitchEnabled)
+    {
+      this.service = this.accessory.addService(this.this.Service.Switch) || this.accessory.getService(this.Service.Switch);
+      this.service.getCharacteristic(this.Characteristic.On)
+      .on('get', async callback => this.getOn(callback))
+      .on('set', async (state, callback) => this.setOn(state, callback));
+    }
 
   }
 // Handle requests to get the alarm states. Return index of alarm state
@@ -182,6 +191,15 @@ async getValveFault(callback) {
   var currentValue = this.Characteristic.StatusFault.NO_FAULT;
   return callback(null, currentValue);
 }
+async getOn() {
+  
+  const currentValue = 1;
+  return currentValue;
+}
+
+async OnSet(value) {
+ 
+}   
 
 }
 
