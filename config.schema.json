@@ -33,11 +33,17 @@
         "title": " Debug",
         "type": "boolean"
       },
+        "enableValveCntrl": {
+        "title": "Enable Valve control using Homekit",
+        "type": "boolean",
+        "default": false,
+        "description": "Enable or disable Smart Water Shutoff within Homekit."
+      },
         "deviceRefresh": {
         "title": "Device Refresh Interval",
         "type": "integer",
         "default": 60,
-        "description": "Poll interval to obtain device updates in seconds. <b>Please note:</b> A very low value may cause lockout to your account.",
+        "description": "Poll interval to obtain device updates in seconds. <b>Please note:</b> A very low value may cause lockout to your account and/or API errors.",
         "minimum": 15,
         "maximum": 3600
       },
@@ -45,7 +51,7 @@
         "title": "Sleep Time",
         "type": "integer",
         "default": 120,
-        "description": "Sleep Mode is a system mode that quiets all monitoring and alerting, effectively putting the Flo System to sleep. This value represents the lenght of time to place the system sleep mode.",
+        "description": "Sleep Mode is a system mode that quiets all monitoring and alerting, effectively putting the Flo System to sleep. This value represents the lenght of time to place the system in sleep mode.",
         "oneOf": [{
           "title": "2 Hours",
           "enum": [
@@ -80,7 +86,10 @@
       "items": [
         "name",
         "auth.username",
-        "auth.password"
+        "auth.password",
+        "deviceRefresh",
+        "sleepRevertMinutes",
+        "enableValveCntrl"
       ]
     },
     {
@@ -91,8 +100,6 @@
           "key": "debug",
           "description": "To see all messages the Homebridge debug (<code>-D</code>) option must also be enabled. <small>See <a target='_blank' href='https://github.com/homebridge/homebridge-raspbian-image/wiki/How-To-Enable-Debug-or-Insecure-Mode'>https://github.com/homebridge/homebridge-raspbian-image/wiki/How-To-Enable-Debug-or-Insecure-Mode</a></small>"
         },
-        "deviceRefresh",
-        "sleepRevertMinutes",
         {
           "key": "excludedDevices",
           "title": "Excluded Devices",

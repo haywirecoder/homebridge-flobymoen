@@ -16,17 +16,6 @@ const FLO_WATERSENSOR ='puck_oem';
 const FLO_SMARTWATER = 'flo_device_v2';
 
 class FlobyMoem extends EventEmitter {
-    
-       
-    auth_token = {};
-    flo_devices = [];
-    flo_locations = [];
-    tokenRefreshHandle;
-    deviceRefreshHandle;
-    alertRefreshHandle;
-    deviceRefreshTime;
-    log;
-    debug;
 
     constructor(log, config,debug) {
         super();
@@ -37,9 +26,10 @@ class FlobyMoem extends EventEmitter {
         this.alertRefreshHandle = null;
         this.deviceRefreshTime = config.deviceRefresh * 1000 || 30000;
         this.sleepRevertMinutes = config.sleepRevertMinutes || 120;
+        this.excludedDevices = config.excludedDevices || [];
         this.auth_token.username = config.auth.username;
         this.auth_token.password = config.auth.password;
-        this.IsBusy = false;
+        this.isBusy = false;
         
     };
 
@@ -173,39 +163,43 @@ class FlobyMoem extends EventEmitter {
                             const device_response = await axios.get(url, this.auth_token.header);
                             var device_info = device_response;
                             if (this.debug) this.log.debug("Device Raw Data: ", device_info.data);
-                            // create flo device object
-                            var device = {};
-                            // Store key information about device
-                            device.name = device_info.data.nickname;
-                            device.deviceModel = device_info.data.deviceModel;
-                            device.type = device_info.data.deviceType;
-                            device.serialNumber = device_info.data.serialNumber;
-                            device.location = device_info.data.location.id;
-                            device.deviceid = device_info.data.id;
-                            device.notifications = device_info.data.notifications.pending;
-                            device.lastUpdate = new Date(device_info.data.lastHeardFromTime);
-                            // determine type of device and set proper data elements
-                            switch (device_info.data.deviceType) {
-                                case FLO_WATERSENSOR:
-                                    device.temperature = device_info.data.telemetry.current.tempF;
-                                    device.humidity = device_info.data.telemetry.current.humidity;
-                                    // Return whether water is detected, for leak detectors.
-                                    device.waterdetect = device_info.data.fwProperties.telemetry_water;
-                                    // Return the battery level for battery-powered device, e.g. leak detectors
-                                    device.batterylevel = device_info.data.battery.level;
-                                    break;
-                                case FLO_SMARTWATER:
-                                    device.psi = device_info.data.telemetry.current.psi;
-                                    device.gpm = device_info.data.telemetry.current.gpm;
-                                    device.systemCurrentState = device_info.data.systemMode.lastKnown;
-                                    device.systemTargetState = device_info.data.systemMode.target;
-                                    device.valveCurrentState = device_info.data.valve.lastKnown;
-                                    device.valveTargetState = device_info.data.valve.target;
-                                    break;
-                            } 
-                            // Store device in array, the array will store all of users device in all location.
-                            this.flo_devices.push(device);
-
+                            if (this.excludedDevices.includes(device_info.data.serialNumber)) {
+                                this.log.info(`Excluding sensor with serial '${device_info.data.serialNumber}'`);
+                               
+                            } else {
+                                // create flo device object
+                                var device = {};
+                                // Store key information about device
+                                device.name = device_info.data.nickname;
+                                device.deviceModel = device_info.data.deviceModel;
+                                device.type = device_info.data.deviceType;
+                                device.serialNumber = device_info.data.serialNumber;
+                                device.location = device_info.data.location.id;
+                                device.deviceid = device_info.data.id;
+                                device.notifications = device_info.data.notifications.pending;
+                                device.lastUpdate = new Date(device_info.data.lastHeardFromTime);
+                                // determine type of device and set proper data elements
+                                switch (device_info.data.deviceType) {
+                                    case FLO_WATERSENSOR:
+                                        device.temperature = device_info.data.telemetry.current.tempF;
+                                        device.humidity = device_info.data.telemetry.current.humidity;
+                                        // Return whether water is detected, for leak detectors.
+                                        device.waterdetect = device_info.data.fwProperties.telemetry_water;
+                                        // Return the battery level for battery-powered device, e.g. leak detectors
+                                        device.batterylevel = device_info.data.battery.level;
+                                        break;
+                                    case FLO_SMARTWATER:
+                                        device.psi = device_info.data.telemetry.current.psi;
+                                        device.gpm = device_info.data.telemetry.current.gpm;
+                                        device.systemCurrentState = device_info.data.systemMode.lastKnown;
+                                        device.systemTargetState = device_info.data.systemMode.target;
+                                        device.valveCurrentState = device_info.data.valve.lastKnown;
+                                        device.valveTargetState = device_info.data.valve.target;
+                                        break;
+                                } 
+                                // Store device in array, the array will store all of users device in all location.
+                                this.flo_devices.push(device);
+                            }
                         } 
                         catch(err) {
                             this.log.error("Device Error: " + err.message);
@@ -227,11 +221,11 @@ class FlobyMoem extends EventEmitter {
         if (!this.isLoggedIn()) {
             await this.refreshToken();
         }
-        if (this.IsBusy) {
+        if (this.isBusy) {
             this.info.warn("System Mode: Another process is already updating the Flo system.")
             return;
         }
-        this.IsBusy = true;
+        this.isBusy = true;
         var url = FLO_V2_API_BASE + "/locations/" + location + "/systemMode";
         var modeRequestbody = {
             'target': mode,
@@ -255,7 +249,7 @@ class FlobyMoem extends EventEmitter {
         {
             this.log.error("Error: " + err.message);
         }
-        this.IsBusy = false;
+        this.isBusy = false;
        
     };
     async setValue(deviceid, mode) {
@@ -263,11 +257,11 @@ class FlobyMoem extends EventEmitter {
         if (!this.isLoggedIn()) {
             await this.refreshToken();
         }
-        if (this.IsBusy) {
+        if (this.isBusy) {
             this.info.warn("System Mode: Another process is already updating the Flo system.")
             return;
         }
-        this.IsBusy = true;
+        this.isBusy = true;
         var url = FLO_V2_API_BASE + "/devices/" + deviceid;
 
         var modeRequestbody = {
@@ -281,11 +275,11 @@ class FlobyMoem extends EventEmitter {
             response = await axios.post(url, modeRequestbody, this.auth_token.header);
             this.log.info("Flo valve now: " , mode);
             if (this.debug) this.log.debug(response);
-        } catch(err)
-        {
+
+        } catch(err) {
             this.log.error("Error: " + err.message);
         }
-        this.IsBusy = false;
+        this.isBusy = false;
        
     };
 
@@ -411,7 +405,7 @@ class FlobyMoem extends EventEmitter {
              clearTimeout(this.deviceRefreshHandle);
              this.deviceRefreshHandle = null;
          }
-         if (this.IsBusy) {
+         if (this.isBusy) {
             this.info.warn("Device Update: Another process is already updating the Flo system.\n Skipping Interval Update.")
             this.deviceRefreshHandle = setTimeout(() => this.backgroundRefresh(), this.deviceRefreshTime); 
             return;

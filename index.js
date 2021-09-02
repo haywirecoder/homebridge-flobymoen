@@ -19,12 +19,11 @@ class FloByMoenPlatform {
     this.log = log;
     this.name = config.name;
     this.debug = config.debug || false;
-    this.excludedDevices = config.excludedDevices || [];
     this.devices = [];
     this.accessories = [];
     this.api = api;  
     this.refreshInterval = config.deviceRefresh * 1000 || 30000;
-    this.valveControl = config.enableValveCntrl || false;
+    this.config = config;
     this.flo = new floengine (log, config, this.debug);
     
    
@@ -34,6 +33,8 @@ class FloByMoenPlatform {
       if (this.debug) this.log.debug('Initialization Successful.');
     }).catch(err => {
               this.log.error('Flo API Initization Failure:', err);
+               // terminate plug-in initization
+              return;
     });
 
   
@@ -68,7 +69,7 @@ class FloByMoenPlatform {
     let currentDevice = this.flo.flo_devices[i];
     switch (currentDevice.type) {
         case FLO_SMARTWATER:
-          var smartWaterAccessory = new smartwater(this.flo, currentDevice,this.log, this.debug, this.valveControl, Service, Characteristic, UUIDGen);
+          var smartWaterAccessory = new smartwater(this.flo, currentDevice,this.log, this.debug, this.config, Service, Characteristic, UUIDGen);
           // check the accessory was not restored from cache
           var foundAccessory = this.accessories.find(accessory => accessory.UUID === smartWaterAccessory.uuid)
           if (!foundAccessory) {
@@ -99,6 +100,8 @@ class FloByMoenPlatform {
             waterAccessory.setAccessory(foundAccessory,false);
         break;
        }
+       // Clean up cache accessories
+       this.orphanAccessory();
        // Start background process to poll devices.
        this.flo.startPollingProcess();
     }
@@ -128,10 +131,21 @@ class FloByMoenPlatform {
       }}
   }
 
-
+  // Find accessory with no association with Flo device and remove
+  async orphanAccessory() {
+    var cachedAccessory = this.accessories;
+    for (var i = 0; i < cachedAccessory.length; i++) 
+    {   
+      let accessory = cachedAccessory[i];
+      var foundAccessory = this.flo.flo_devices.find(device => UUIDGen.generate(device.serialNumber) === accessory.UUID)
+      if (!foundAccessory) {
+                this.log.warn('Removing cache device: ', accessory.UUID);
+                this.removeAccessory(accessory,true);
+      }
+    }
+  }
   // This function is invoked when homebridge restores cached accessories from disk at startup.
   // It should be used to setup event handlers for characteristics and update respective values.
-  
   configureAccessory(accessory) {
     if (this.debug) this.log.debug('Loading accessory from cache:', accessory.displayName);
     // add the restored accessory to the accessories cache so we can track if it has already been registered
