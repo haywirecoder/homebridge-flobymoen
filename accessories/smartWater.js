@@ -42,8 +42,10 @@ class FloSmartWater {
     };
     this.VALID_CURRENT_STATE_VALUES = [Characteristic.SecuritySystemCurrentState.STAY_ARM, Characteristic.SecuritySystemCurrentState.AWAY_ARM, Characteristic.SecuritySystemCurrentState.DISARMED, Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED];
     this.VALID_TARGET_STATE_VALUES = [Characteristic.SecuritySystemTargetState.STAY_ARM, Characteristic.SecuritySystemTargetState.AWAY_ARM, Characteristic.SecuritySystemTargetState.DISARM];
-    this.IsValveControlEnabled = config.enableValveCntrl || false;
-    this.IsHealthSwitchEnabled = config.enableHealthSwitch || false;
+    
+    this.IsValveControlEnabled = config.enableValveControl ? config.enableValveControl : false;
+    this.IsHealthSwitchEnabled = config.showHealthTestSwitch ? config.showHealthTestSwitch : false;
+    
     this.flo = flo;
     this.flo.on(this.id, this.refreshState.bind(this));
   }
@@ -110,13 +112,19 @@ class FloSmartWater {
     this.service.getCharacteristic(this.Characteristic.StatusFault)
         .on('get', async callback => this.getValveFault(callback));
 
-    // Create Health test switch
+    // Create Health test switch or remove depending on configuration.
     if (this.IsHealthSwitchEnabled)
     {
-      this.service = this.accessory.addService(this.this.Service.Switch) || this.accessory.getService(this.Service.Switch);
+      this.service = this.accessory.getService(this.Service.Switch);
+      if(this.service == undefined) this.service = this.accessory.addService(this.Service.Switch); 
       this.service.getCharacteristic(this.Characteristic.On)
-      .on('get', async callback => this.getOn(callback))
-      .on('set', async (state, callback) => this.setOn(state, callback));
+        .on('get', async callback => this.getOn(callback))
+        .on('set', async (state, callback) => this.setOn(state, callback));
+    }
+    else{
+      // Remove service if already created in cache accessory
+      this.service = this.accessory.getService(this.Service.Switch);
+      if(this.service != undefined) this.accessory.removeService(this.service);
     }
 
   }
@@ -144,7 +152,6 @@ async getValveActive(callback) {
 
   // Assume on and disable if state is close
   var currentValue = this.Characteristic.Active.ACTIVE;
-  
   if (this.valueStatus == FLO_VALVE_CLOSE) currentValue = this.Characteristic.Active.INACTIVE;
 
   return callback(null, currentValue);
@@ -163,7 +170,7 @@ async setValveActive(homekitState, callback) {
       this.valueStatus = FLO_VALVE_CLOSE;
     }
   } else {
-    this.log.warn("Smart Water Shutoff: Valve control is disabled for HomeKit.");
+      this.log.warn("Smart Water Shutoff: Valve control is disabled in Homebridge.");
   }
   return callback(null);
 }
@@ -171,7 +178,7 @@ async setValveActive(homekitState, callback) {
 // Handle requests to get the current value of the "In Use" characteristic
 async getValveInUse(callback) {
   var currentValue = this.Characteristic.InUse.NOT_IN_USE;
-  // set this to a valid value for InUse
+  // set this to a valid value for In-Use
   if (this.gallonsPerMin > 0) currentValue = this.Characteristic.InUse.IN_USE;
   return callback(null, currentValue);
 }
@@ -191,14 +198,14 @@ async getValveFault(callback) {
   var currentValue = this.Characteristic.StatusFault.NO_FAULT;
   return callback(null, currentValue);
 }
-async getOn() {
-  
-  const currentValue = 1;
-  return currentValue;
+async getOn(callback) {
+  const returnValue = 1;
+  return callback(null, returnValue);
 }
 
-async OnSet(value) {
- 
+async setOn(value,callback) {
+  this.log.info("Smart Water Shutoff: Health Test.");
+  return callback(null);
 }   
 
 }
