@@ -16,8 +16,20 @@ const FLO_WATERSENSOR ='puck_oem';
 const FLO_SMARTWATER = 'flo_device_v2';
 
 class FlobyMoem extends EventEmitter {
+    auth_token = {};
+    flo_devices = [];
+    flo_locations = [];
+    excludedDevices = []
+    tokenRefreshHandle;
+    deviceRefreshHandle;
+    alertRefreshHandle;
+    deviceRefreshTime;
+    sleepRevertMinutes;
+    log;
+    debug;
 
-    constructor(log, config,debug) {
+
+    constructor(log, config, debug) {
         super();
         this.log = log || console.log;
         this.debug = debug || console.debug;
@@ -181,7 +193,8 @@ class FlobyMoem extends EventEmitter {
                                 // determine type of device and set proper data elements
                                 switch (device_info.data.deviceType) {
                                     case FLO_WATERSENSOR:
-                                        device.temperature = device_info.data.telemetry.current.tempF;
+                                        // homekit expect temperatures in celuis and allow homekit to perform conversion if needed.
+                                        device.temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
                                         device.humidity = device_info.data.telemetry.current.humidity;
                                         // Return whether water is detected, for leak detectors.
                                         device.waterdetect = device_info.data.fwProperties.telemetry_water;
@@ -365,7 +378,8 @@ class FlobyMoem extends EventEmitter {
             // determine type of device and update the proper data elements
             switch (device.type) {
                 case FLO_WATERSENSOR:
-                    device.temperature = device_info.data.telemetry.current.tempF;
+                    // homekit expect temperatures in celuis and allow homekit to perform conversion if needed.
+                    device.temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
                     device.humidity = device_info.data.telemetry.current.humidity;
                     // Return whether water is detected, for leak detectors.
                     device.waterdetect = device_info.data.fwProperties.telemetry_water;

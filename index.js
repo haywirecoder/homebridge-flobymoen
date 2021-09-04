@@ -76,28 +76,27 @@ class FloByMoenPlatform {
             // create a new accessory
             let newAccessory = new this.api.platformAccessory(smartWaterAccessory.name, smartWaterAccessory.uuid);
             // add services and Characteristic
-            smartWaterAccessory.setAccessory(newAccessory,true);
+            smartWaterAccessory.setAccessory(newAccessory);
             // register the accessory
             this.addAccessory(smartWaterAccessory);
           }
           else // accessory already exist just set characteristic
-            smartWaterAccessory.setAccessory(foundAccessory,false);
+            smartWaterAccessory.setAccessory(foundAccessory);
         break; 
         case FLO_WATERSENSOR: 
-          var waterAccessory = new watersensor(this.flo, currentDevice,this.log, this.debug, Service, Characteristic, UUIDGen);
+          var waterAccessory = new watersensor(this.flo, currentDevice,this.log, this.debug, this.config, Service, Characteristic, UUIDGen);
           // check the accessory was not restored from cache
           var foundAccessory = this.accessories.find(accessory => accessory.UUID === waterAccessory.uuid)
-
           if (!foundAccessory) {
               // create a new accessory
               let newAccessory = new this.api.platformAccessory(waterAccessory.name, waterAccessory.uuid);
               // add services and Characteristic
-              waterAccessory.setAccessory(newAccessory,true);
+              waterAccessory.setAccessory(newAccessory);
               // register the accessory
               this.addAccessory(waterAccessory);
           }
           else // accessory already exist just set characteristic
-            waterAccessory.setAccessory(foundAccessory,false);
+            waterAccessory.setAccessory(foundAccessory);
         break;
        }
        // Clean up cache accessories

@@ -33,11 +33,23 @@
         "title": " Debug",
         "type": "boolean"
       },
-        "enableValveCntrl": {
-        "title": "Enable Valve control using Homekit",
+      "showTemperatureAndHumidity": {
+        "title": "Show Water Sensor Temperature and Humidity in Homekit",
+        "type": "boolean",
+        "default": true,
+        "description": "Display Water Sensor(s) area temperature and humidity in Homekit."
+      },
+        "enableValveControl": {
+        "title": "Enable valve control using Homekit",
         "type": "boolean",
         "default": false,
         "description": "Enable or disable Smart Water Shutoff within Homekit."
+      },
+        "showHealthTestSwitch": {
+        "title": "Show a Run Health Test switch in Homekit",
+        "type": "boolean",
+        "default": false,
+        "description": "Display a Health Test button to start a manual Health Test in Flo."
       },
         "deviceRefresh": {
         "title": "Device Refresh Interval",
@@ -89,7 +101,9 @@
         "auth.password",
         "deviceRefresh",
         "sleepRevertMinutes",
-        "enableValveCntrl"
+        "showTemperatureAndHumidity",
+        "showHealthTestSwitch",
+        "enableValveControl"
       ]
     },
     {
