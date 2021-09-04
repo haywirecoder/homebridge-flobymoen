@@ -56,8 +56,8 @@ class FloSmartWater {
     if (this.debug) this.log.debug(`Device updated requested: ` , eventData);
     this.valueStatus = eventData.device.valveTargetState;
     this.gallonsPerMin = eventData.device.gpm;
-    // get the leak sensor service to update status
-    this.service = this.accessory.getService(this.Service.SecuritySystem);
+    // get security system
+    const securitySevice = this.accessory.getService(this.Service.SecuritySystem);
     if(eventData.device.notifications.criticalCount > 0) {
       this.systemCurrentState = 'alarm';
     }
@@ -68,63 +68,59 @@ class FloSmartWater {
       this.systemTargetState = eventData.device.systemTargetState;
     }
   
-    this.service.updateCharacteristic(this.Characteristic.SecuritySystemCurrentState, this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]);
-    this.service.updateCharacteristic(this.Characteristic.SecuritySystemTargetState, this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState]);
+    securitySevice.updateCharacteristic(this.Characteristic.SecuritySystemCurrentState, this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]);
+    securitySevice.updateCharacteristic(this.Characteristic.SecuritySystemTargetState, this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState]);
 
   }
 
-  identify(callback) {
-    if (this.debug) this.log.debug(`Identify request for ${this.name}`);
-    callback();
-  }
-
-  setAccessory(accessory,isNew)  {
+  setAccessory(accessory)  {
     this.accessory = accessory;
-    if (isNew) this.accessory.addService(this.Service.SecuritySystem);
-    this.accessory.on('identify', (paired, callback) => this.identify(callback));
-
     this.accessory.getService(this.Service.AccessoryInformation)
         .setCharacteristic(this.Characteristic.Manufacturer, 'Moen')
         .setCharacteristic(this.Characteristic.Model, 'Smart Water Shutoff')
         .setCharacteristic(this.Characteristic.SerialNumber, this.id);
 
-    this.service = this.accessory.getService(this.Service.SecuritySystem);
-    this.service.getCharacteristic(this.Characteristic.SecuritySystemCurrentState)
+    var securityService = this.accessory.getService(this.Service.SecuritySystem);
+    if(securityService == undefined) securityService = this.accessory.addService(this.Service.SecuritySystem,'System Mode','mode.' + this.id);
+    securityService.setCharacteristic(this.Characteristic.Name, 'System Mode'); 
+    securityService.getCharacteristic(this.Characteristic.SecuritySystemCurrentState)
         .setProps({ validValues: this.VALID_CURRENT_STATE_VALUES })
         .on('get', async callback => this.getCurrentState(callback));
-    this.service.getCharacteristic(this.Characteristic.SecuritySystemTargetState)
+        securityService.getCharacteristic(this.Characteristic.SecuritySystemTargetState)
         .setProps({ validValues: this.VALID_TARGET_STATE_VALUES })
         .on('get', async callback => this.getTargetState(callback))
         .on('set', async (state, callback) => this.setTargetState(state, callback));
 
     // create a new Valve service
-    if (isNew) this.accessory.addService(this.Service.Valve);  
-    this.service = this.accessory.getService(this.Service.Valve);
-
+    var valveService = this.accessory.getService(this.Service.Valve);
+    if(valveService == undefined) valveService = this.accessory.addService(this.Service.Valve,'Valve', 'valve.' + this.id); 
     // create handlers for required characteristics
-    this.service.getCharacteristic(this.Characteristic.Active)
+    valveService.setCharacteristic(this.Characteristic.Name, 'Valve'); 
+    valveService.getCharacteristic(this.Characteristic.Active)
         .on('get', async callback => this.getValveActive(callback))
         .on('set', async (state, callback) => this.setValveActive(state, callback));
-    this.service.getCharacteristic(this.Characteristic.InUse)
+    valveService.getCharacteristic(this.Characteristic.InUse)
         .on('get', async callback => this.getValveInUse(callback));
-    this.service.getCharacteristic(this.Characteristic.ValveType)
+    valveService.getCharacteristic(this.Characteristic.ValveType)
         .on('get', async callback => this.getValveType(callback));
-    this.service.getCharacteristic(this.Characteristic.StatusFault)
+    valveService.getCharacteristic(this.Characteristic.StatusFault)
         .on('get', async callback => this.getValveFault(callback));
 
     // Create Health test switch or remove depending on configuration.
+    var buttonService;
     if (this.IsHealthSwitchEnabled)
     {
-      this.service = this.accessory.getService(this.Service.Switch);
-      if(this.service == undefined) this.service = this.accessory.addService(this.Service.Switch); 
-      this.service.getCharacteristic(this.Characteristic.On)
+      buttonService = this.accessory.getService(this.Service.Switch);
+      if(buttonService == undefined) buttonService = this.accessory.addService(this.Service.Switch,'Run Health Test', "rht." + this.id); 
+      buttonService.setCharacteristic(this.Characteristic.Name, 'Run Health Test'); 
+      buttonService.getCharacteristic(this.Characteristic.On)
         .on('get', async callback => this.getOn(callback))
         .on('set', async (state, callback) => this.setOn(state, callback));
     }
     else{
       // Remove service if already created in cache accessory
-      this.service = this.accessory.getService(this.Service.Switch);
-      if(this.service != undefined) this.accessory.removeService(this.service);
+      buttonService = this.accessory.getService(this.Service.Switch);
+      if(buttonService != undefined) this.accessory.removeService(buttonService);
     }
 
   }
@@ -177,9 +173,11 @@ async setValveActive(homekitState, callback) {
 
 // Handle requests to get the current value of the "In Use" characteristic
 async getValveInUse(callback) {
-  var currentValue = this.Characteristic.InUse.NOT_IN_USE;
-  // set this to a valid value for In-Use
-  if (this.gallonsPerMin > 0) currentValue = this.Characteristic.InUse.IN_USE;
+  // var currentValue = this.Characteristic.InUse.NOT_IN_USE;
+  // // set this to a valid value for In-Use
+  // if (this.gallonsPerMin > 0) currentValue = this.Characteristic.InUse.IN_USE;
+  var currentValue = this.Characteristic.InUse.IN_USE;
+  if (this.valueStatus == FLO_VALVE_CLOSE) currentValue = this.Characteristic.InUse.NOT_IN_USE;
   return callback(null, currentValue);
 }
 
@@ -204,7 +202,7 @@ async getOn(callback) {
 }
 
 async setOn(value,callback) {
-  this.log.info("Smart Water Shutoff: Health Test.");
+  this.log.info("Smart Water Shutoff: Health Test Not Yet Implemented.");
   return callback(null);
 }   
 

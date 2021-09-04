@@ -11,7 +11,7 @@ class FloWaterSensor {
     this.debug = debug;
     this.name = device.name;
     this.uuid = UUIDGen.generate(device.serialNumber);
-    this.currentTemperature = device.temperature || -270;
+    this.currentTemperature = device.temperature || -180;
     this.currentHumidity = device.humidity || 0.0;
     this.leakDected = false;
     this.batteryLevel = device.batterylevel || 0;
@@ -23,77 +23,66 @@ class FloWaterSensor {
   refreshState(eventData)
   {
     if (this.debug) this.log.debug(`Device updated requested: ` , eventData);
-    this.currentTemperature = eventData.device.temperature || -270;
+    this.currentTemperature = eventData.device.temperature || -180;
     this.currentHumidity = eventData.device.humidity || 0.0;
     this.batteryLevel = eventData.device.batterylevel || 0;
 
     // get the leak sensor service to update status
-    this.service = this.accessory.getService(this.Service.LeakSensor);
-    if(eventData.device.notifications.criticalCount > 0) 
+    const leakService = this.accessory.getService(this.Service.LeakSensor);
+    if((eventData.device.notifications.criticalCount > 0) || (eventData.device.waterdetect))
     { 
       this.leakDected = true; 
-      this.service.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_DETECTED);
+      leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_DETECTED);
     }
      else  { 
 
        this.leakDected = false;
-       this.service.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
+       leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
     }
 
 
   }
 
-  identify(callback) {
-    if (this.debug) this.log.debug(`Identify request for ${this.name}`);
-    callback();
-  }
-
- 
-  setAccessory(accessory,isNew) {
+  setAccessory(accessory) {
     this.accessory = accessory;
-
-    // Add leak sensor
-    if (isNew) this.accessory.addService(this.Service.LeakSensor);
-    this.accessory.on('identify', (paired, callback) => this.identify(callback));
-
     this.accessory.getService(this.Service.AccessoryInformation)
         .setCharacteristic(this.Characteristic.Manufacturer, 'Moen')
         .setCharacteristic(this.Characteristic.Model, 'Water Sensor')
         .setCharacteristic(this.Characteristic.SerialNumber, this.id);
 
-    this.service = this.accessory.getService(this.Service.LeakSensor);
-    this.service.getCharacteristic(this.Characteristic.LeakDetected)
+       // Add leak sensor
+    var leakService = this.accessory.getService(this.Service.LeakSensor);
+    if(leakService == undefined) leakService = this.accessory.addService(this.Service.LeakSensor); 
+    leakService.getCharacteristic(this.Characteristic.LeakDetected)
         .on('get', async callback => this.getLeakStatus(callback));
-
-    this.service.getCharacteristic(this.Characteristic.StatusLowBattery)
+    leakService.getCharacteristic(this.Characteristic.StatusLowBattery)
         .on('get', async callback => this.getBatteryStatus(callback));
-    this.service.getCharacteristic(this.Characteristic.BatteryLevel)
-        .on('get', async callback => this.getBatteryLevel(callback));
 
     // Check if Temperature and Humidity should be shown in homekit
+    var tempService;
+    var humService;
     if (this.IsTemperatureAndHumidity)
     {
       // Add temperature sensor
-      this.service = this.accessory.getService(this.Service.TemperatureSensor);
-      if (this.service == undefined) this.service = this.accessory.addService(this.Service.TemperatureSensor);  
+      tempService = this.accessory.getService(this.Service.TemperatureSensor);
+      if (tempService == undefined) tempService = this.accessory.addService(this.Service.TemperatureSensor);  
       // create handlers for required characteristics
-      this.service.getCharacteristic(this.Characteristic.CurrentTemperature)
+      tempService.getCharacteristic(this.Characteristic.CurrentTemperature)
       .on('get', async callback => this.getCurrentTemperature(callback));
 
       // Add Humidity sensor
-      this.service = this.accessory.getService(this.Service.HumiditySensor);
-      if (this.service == undefined)  this.service = this.accessory.addService(this.Service.HumiditySensor);  
-      this.service = this.accessory.getService(this.Service.HumiditySensor);
+      humService = this.accessory.getService(this.Service.HumiditySensor);
+      if (humService == undefined)  humService = this.accessory.addService(this.Service.HumiditySensor);  
       // create handlers for required characteristics
-      this.service.getCharacteristic(this.Characteristic.CurrentRelativeHumidity)
+      humService.getCharacteristic(this.Characteristic.CurrentRelativeHumidity)
       .on('get', async callback => this.getCurrentRelativeHumidity(callback));
     }
     else {
       // Remove service if already created in cache accessory
-      this.service = this.accessory.getService(this.Service.TemperatureSensor);
-      if (this.service != undefined) this.accessory.removeService(this.service);
-      this.service = this.accessory.getService(this.Service.HumiditySensor);
-      if (this.service != undefined) this.accessory.removeService(this.service);  
+      tempService = this.accessory.getService(this.Service.TemperatureSensor);
+      if (tempService!= undefined) this.accessory.removeService(tempService);
+      humService = this.accessory.getService(this.Service.HumiditySensor);
+      if (humService != undefined) this.accessory.removeService(humService);  
     }
   }
 
