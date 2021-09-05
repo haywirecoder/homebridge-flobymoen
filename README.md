@@ -33,7 +33,7 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 | deviceRefresh        | Polling interval to obtain status of Flo devices, provide in seconds. Default to <i>90</i> seconds. <b>Please note:</b> Small values may cause account lock or frequent API to errors.                                                                    |
 | sleepRevertMinutes          | When Smart Water Shutoff Value is put into sleep what amount of time before it reverted back to previous mode (away or home).  Time value is provided in minutes (<i>120, 1440, 4320</i>). Default to <i>120</i> mins (2 hours).     
 | showTemperatureAndHumidity| Display Temperature and Humidity for Water Sensors in Homekit.   Default to <i>true</i>                                                        |
-| showHealthTestSwitch | Display Health Check switch in Homekit.   <b> Do not use not yet implemented.</b>                                                        |
+| showHealthTestSwitch | Display Health Check switch in Homekit.   <b> Do not use - not yet implemented.</b>                                                        |
 | enableValveControl         | Enable Homekit to control the Smart Water Shutoff valve. The valve in Homekit will display (monitor) the status of valve, but will not be able control it unless this value is set to true. Default to <i>false</i>   |
 
 
