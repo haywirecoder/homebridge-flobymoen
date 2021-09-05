@@ -20,7 +20,7 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 * Obtain homebridge vertification for module. 
 
 ## Know Issues:
-* At times the plug-in reports a 502 error. This is a communication error with the Flo server, an occaisional error will not effect operations of the plug.
+* At times the plug-in reports a 502 error. This is a communication error with the Flo server, an occaisional error will not effect operations of the plug-in.
 
 ## Configuration options
 
