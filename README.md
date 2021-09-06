@@ -28,13 +28,13 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 
 | Attributes        | Description                                                                                                              |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| username              | Flo Moen username                     |
-| password              | Flo Moen password                                                                  |
-| deviceRefresh        | Polling interval to obtain status of Flo devices, provide in seconds. Default to <i>90</i> seconds. <b>Please note:</b> Small values may cause account lock or frequent API to errors.                                                                    |
+| username              | Flo Moen username. This is a required value.                    |
+| password              | Flo Moen password. This is a required value.                                                                 |
+| deviceRefresh        | Polling interval to obtain status of Flo devices, provide in seconds. Default to <i>90</i> seconds, this is an optional value. <b>Please note:</b> Small values may cause account lock or frequent API to errors.                                                                    |
 | sleepRevertMinutes          | When Smart Water Shutoff Value is put into sleep what amount of time before it reverted back to previous mode (away or home).  Time value is provided in minutes (<i>120, 1440, 4320</i>). Default to <i>120</i> mins (2 hours).     
-| showTemperatureAndHumidity| Display Temperature and Humidity for Water Sensors in Homekit.   Default to <i>true</i>                                                        |
+| showTemperatureAndHumidity| Display Temperature and Humidity for Water Sensors in Homekit.   Default to <i>true</i>, this is an optional value.                                                        |
 | showHealthTestSwitch | Display Health Check switch in Homekit.   <b> Do not use - not yet implemented.</b>                                                        |
-| enableValveControl         | Enable Homekit to control the Smart Water Shutoff valve. By design the valve will display in Homekit (e.g. Home). The status of the valve will be displayed and monitored, however it will not be controllable (e.g. Open or Close) unless this value is set to true. Default to <i>false</i>   |
+| enableValveControl         | Enable Homekit to control the Smart Water Shutoff valve. By design the valve will display in Homekit (e.g. Home). The status of the valve will be displayed and monitored, however it will not be controllable (e.g. Open or Close) unless this value is set to true. Default to <i>false</i>, this is an optional value.   |
 
 
 Example configuration is below.
