@@ -49,7 +49,7 @@ Example configuration is below.
       "username": <username>,
       "password": <password>
     },
-    "deviceRefresh": 60,
+    "deviceRefresh": 90,
     "sleepRevertMinutes": 120,
     "platform": "Flo-by-Moen"
 }
