@@ -1,6 +1,7 @@
 const packageJson = require('./package.json');
 const smartwater = require('./accessories/smartWater');
 const watersensor = require('./accessories/waterSensor');
+const optionswitch = require('./accessories/optionSwitch');
 const floengine = require('./flomain');
 
 // Flo constants
@@ -21,12 +22,20 @@ class FloByMoenPlatform {
     this.debug = config.debug || false;
     this.devices = [];
     this.accessories = [];
+    this.optionalAccessories = [];
     this.api = api;  
     this.refreshInterval = config.deviceRefresh * 1000 || 30000;
     this.config = config;
+
+    // Check if authentication has been provided.
+    if ((!this.config.auth.username) || (!this.config.auth.password))
+    {
+      this.log.error('Flo authentication information not provided.');
+       // terminate plug-in initization
+      return;
+    }
+    // Create FLo engine object to interact with Flo APIs.
     this.flo = new floengine (log, config, this.debug);
-    
-   
     // Login in meetflo portal
     this.log.info("Starting communication with Flo portal");
     this.initialLoad = this.flo.init().then ( () => {
@@ -37,7 +46,10 @@ class FloByMoenPlatform {
               return;
     });
 
-  
+    // When this event is fired it means Homebridge has restored all cached accessories from disk.
+    // Dynamic Platform plugins should only register new accessories after this event was fired,
+    // in order to ensure they weren't added to homebridge already. This event can also be used
+    // to start discovery of new accessories.
     api.on('didFinishLaunching', () => {
 
       // When login completes discover devices with flo account
@@ -45,12 +57,6 @@ class FloByMoenPlatform {
           // Discover devices
           this.log.info("Initiaizing Flo devices...")
           this.flo.discoverDevices().then (() => {
-            
-            // for (var i = 0; i < this.accessories.length; i++) 
-            //  {   
-            //   this.log.info("Removing: ", i) 
-            //   this.removeAccessory(this.accessories[i], false);}
-              
           // Once devices are discovered update Homekit assessories
           this.refreshAccessories();
           this.log.info(`Flo device updates complete, background polling process started.\nDevice will be polled each ${Math.floor((config.deviceRefresh / 60))} min(s) ${Math.floor((config.deviceRefresh % 60))} second(s).`);      
@@ -64,12 +70,13 @@ class FloByMoenPlatform {
   
   // Process each flo devices and create accessories within the platform. smart water value and water sensor classes 
   // will handle the creation and setting callback for each device types.
+  var IsHealthSwitchEnabled = this.config.showHealthTestSwitch ? this.config.showHealthTestSwitch : false;
 
   for (var i = 0; i < this.flo.flo_devices.length; i++) {
     let currentDevice = this.flo.flo_devices[i];
     switch (currentDevice.type) {
         case FLO_SMARTWATER:
-          var smartWaterAccessory = new smartwater(this.flo, currentDevice,this.log, this.debug, this.config, Service, Characteristic, UUIDGen);
+          var smartWaterAccessory = new smartwater(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
           // check the accessory was not restored from cache
           var foundAccessory = this.accessories.find(accessory => accessory.UUID === smartWaterAccessory.uuid)
           if (!foundAccessory) {
@@ -82,9 +89,26 @@ class FloByMoenPlatform {
           }
           else // accessory already exist just set characteristic
             smartWaterAccessory.setAccessory(foundAccessory);
+          if(IsHealthSwitchEnabled) {
+              var healthswitch = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
+              // check the accessory was not restored from cache
+              var foundAccessory = this.accessories.find(accessory => accessory.UUID === healthswitch.uuid)
+              if (!foundAccessory) {
+                // create a new accessory
+                let newAccessory = new this.api.platformAccessory(currentDevice.name +" Health Test", healthswitch.uuid);
+                // add services and Characteristic
+                healthswitch.setAccessory(newAccessory);
+                // register the accessory
+                this.addAccessory(healthswitch);
+              }
+              else // accessory already exist just set characteristic
+                healthswitch.setAccessory(foundAccessory);
+              // This a accessories not base on flo device list, track it in another list for future use.
+              this.optionalAccessories.push(healthswitch);
+          }
         break; 
         case FLO_WATERSENSOR: 
-          var waterAccessory = new watersensor(this.flo, currentDevice,this.log, this.debug, this.config, Service, Characteristic, UUIDGen);
+          var waterAccessory = new watersensor(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
           // check the accessory was not restored from cache
           var foundAccessory = this.accessories.find(accessory => accessory.UUID === waterAccessory.uuid)
           if (!foundAccessory) {
@@ -99,11 +123,11 @@ class FloByMoenPlatform {
             waterAccessory.setAccessory(foundAccessory);
         break;
        }
-       // Clean up cache accessories
-       this.orphanAccessory();
-       // Start background process to poll devices.
-       this.flo.startPollingProcess();
     }
+    // Clean accessories with no association with Flo devices.
+    this.orphanAccessory();
+    // Start background process to poll devices.
+    this.flo.startPollingProcess();
   }
 
   //Add accessory to homekit dashboard
@@ -120,7 +144,7 @@ class FloByMoenPlatform {
 
   //Remove accessory to homekit dashboard
   removeAccessory(accessory, updateIndex) {
-    if (this.debug) this.log.debug('Removing accessory:',accessory.displayName );
+      this.log.warn('Removing accessory:',accessory.displayName );
       if (accessory) {
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
@@ -133,16 +157,23 @@ class FloByMoenPlatform {
   // Find accessory with no association with Flo device and remove
   async orphanAccessory() {
     var cachedAccessory = this.accessories;
+    var foundAccessory;
+
     for (var i = 0; i < cachedAccessory.length; i++) 
     {   
       let accessory = cachedAccessory[i];
-      var foundAccessory = this.flo.flo_devices.find(device => UUIDGen.generate(device.serialNumber) === accessory.UUID)
+      // determine if accessory is currently a device in flo system, thus should remain
+      foundAccessory = this.flo.flo_devices.find(device => UUIDGen.generate(device.serialNumber) === accessory.UUID)
       if (!foundAccessory) {
-                this.log.warn('Removing cache device: ', accessory.UUID);
-                this.removeAccessory(accessory,true);
+        // determine if an optional compoment, thus should remain
+        foundAccessory = this.optionalAccessories.find(optionalAccessory => optionalAccessory.uuid === accessory.UUID);
+        if (!foundAccessory) {
+            this.removeAccessory(accessory,true);
+        }
       }
     }
   }
+
   // This function is invoked when homebridge restores cached accessories from disk at startup.
   // It should be used to setup event handlers for characteristics and update respective values.
   configureAccessory(accessory) {

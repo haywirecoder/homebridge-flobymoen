@@ -66,8 +66,7 @@ class FlobyMoem extends EventEmitter {
             this.log.info("Using cache Flo token.");
             var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
             this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
-            // this.tokenRefreshHandle = setTimeout(() => this.refreshToken(), refreshTimeoutmillis); 
-            // Display temporary access 
+             // Display temporary access 
             if (this.debug) this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
             // Build query header for future transactions
             this.auth_token.header = {
@@ -265,7 +264,7 @@ class FlobyMoem extends EventEmitter {
         this.isBusy = false;
        
     };
-    async setValue(deviceid, mode) {
+    async setValve(deviceid, mode) {
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
             await this.refreshToken();
