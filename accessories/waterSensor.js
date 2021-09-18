@@ -1,14 +1,12 @@
 "use strict";
 
-const floengine = require("../flomain");
-
 class FloWaterSensor {
-    constructor(flo, device, log, debug, config, Service, Characteristic, UUIDGen) {
+    constructor(flo, device, log, config, Service, Characteristic, UUIDGen) {
     this.Characteristic = Characteristic;
     this.Service = Service;
     this.id = device.serialNumber;
     this.log = log;
-    this.debug = debug;
+    this.debug = config.debug;
     this.name = device.name;
     this.uuid = UUIDGen.generate(device.serialNumber);
     this.currentTemperature = device.temperature || -180;
@@ -39,8 +37,6 @@ class FloWaterSensor {
        this.leakDected = false;
        leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
     }
-
-
   }
 
   setAccessory(accessory) {
@@ -50,7 +46,7 @@ class FloWaterSensor {
         .setCharacteristic(this.Characteristic.Model, 'Water Sensor')
         .setCharacteristic(this.Characteristic.SerialNumber, this.id);
 
-       // Add leak sensor
+    // Add leak sensor
     var leakService = this.accessory.getService(this.Service.LeakSensor);
     if(leakService == undefined) leakService = this.accessory.addService(this.Service.LeakSensor); 
     leakService.getCharacteristic(this.Characteristic.LeakDetected)
@@ -96,7 +92,7 @@ class FloWaterSensor {
     
   }
 
-   //Handle requests to get the current value of the "Current temperature" characteristic
+  //Handle requests to get the current value of the "Current temperature" characteristic
   async getCurrentTemperature(callback) {
     // set this to a valid value for CurrentTemperature
     return callback(null,this.currentTemperature);
