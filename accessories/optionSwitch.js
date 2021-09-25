@@ -1,5 +1,5 @@
 "use strict";
-
+const HealthTestRunTime = 240000;
 class FloOptionSwitch {
     constructor(flo, device, log, config, Service, Characteristic, UUIDGen) {
     this.Characteristic = Characteristic;
@@ -8,6 +8,7 @@ class FloOptionSwitch {
     this.log = log;
     this.debug = config.debug;
     this.deviceid = device.deviceid;
+    this.busy = false;
     this.uuid = UUIDGen.generate(this.id);
     this.flo = flo;
   }
@@ -18,25 +19,36 @@ class FloOptionSwitch {
         .setCharacteristic(this.Characteristic.Manufacturer, 'Moen')
         .setCharacteristic(this.Characteristic.SerialNumber, this.id);
 
-    var swService = this.accessory.getService(this.Service.Switch);
-    if(swService == undefined) swService = this.accessory.addService(this.Service.Switch); 
-    swService.setCharacteristic(this.Characteristic.On, false);
-    swService.getCharacteristic(this.Characteristic.On)
-    .on('get', async callback => this.getOn(callback))
-    .on('set', async (state, callback) => this.setOn(state, callback));
+    var swServiceHealthTest = this.accessory.getService(this.Service.Switch);
+    if(swServiceHealthTest == undefined) swServiceHealthTest = this.accessory.addService(this.Service.Switch); 
+    swServiceHealthTest.setCharacteristic(this.Characteristic.On, false);
+    swServiceHealthTest.getCharacteristic(this.Characteristic.On)
+    .on('get', async callback => this.getHealthTestOn(callback))
+    .on('set', async (state, callback) => this.setHealthTestOn(state, callback));
 
   }
 
-  async getOn(callback) {
-    const returnValue = false;
-    return callback(null, returnValue);
+  async getHealthTestOn(callback) {
+    if(!this.busy) return callback(null, false);
+    else return callback(null, true);
   }
 
-  async setOn(value,callback) {
-    this.log.info("");
+  async setHealthTestOn(value,callback) {
+    if(!this.busy) {
+      this.busy = true;
+      this.flo.runHealthCheck(this.deviceid);
+      setTimeout(this.HeathTestComplete.bind(this), HealthTestRunTime);
+    }
     return callback(null);
-  }  
+  }   
 
+  HeathTestComplete ()
+  {
+    this.busy = false;
+    var swServiceHealthTest = this.accessory.getService(this.Service.Switch);
+    swServiceHealthTest.updateCharacteristic(this.Characteristic.On, false);
+    this.log.info("Health Test Complete.");
+  }
 }
 
 module.exports = FloOptionSwitch;
