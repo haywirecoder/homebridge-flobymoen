@@ -270,7 +270,7 @@ class FlobyMoem extends EventEmitter {
             await this.refreshToken();
         }
         if (this.isBusy) {
-            this.info.warn("System Mode: Another process is already updating the Flo system.")
+            this.info.warn("System Mode: Another plug-in process is already updating the Flo system.")
             return;
         }
         this.isBusy = true;
@@ -295,22 +295,22 @@ class FlobyMoem extends EventEmitter {
        
     };
 
-    async runHealthCheck(device) {
+    async runHealthCheck(deviceid) {
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
             await this.refreshToken();
         }
-        var url = FLO_V2_API_BASE + "/devices/" + device.deviceid + "/healthTest/run";
+        var url = FLO_V2_API_BASE + "/devices/" + deviceid + "/healthTest/run";
 
-        // Change monitor mode based on request
+        // Run health check based on user request 
         var response;
         try {
-            this.log.info("Running Health Check.");
+            this.log.info("Running Health Check. This will take up to 4 mins.");
             response = await axios.post(url,"", this.auth_token.header);
             if (this.debug) this.log.debug(response);
         } catch(err)
         {
-            this.log.error("Error: " + err.message);
+           this.log.error("Error: " + err.message);
         }
        
     };

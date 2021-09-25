@@ -40,21 +40,21 @@
         "description": "Display Water Sensor(s) area temperature and humidity in Homekit."
       },
         "enableValveControl": {
-        "title": "Enable valve control using Homekit",
+        "title": "Enable valve control in Homekit",
         "type": "boolean",
         "default": false,
         "description": "Enable or disable Smart Water Shutoff within Homekit."
       },
         "showHealthTestSwitch": {
-        "title": "Show a Run Health Test switch in Homekit",
+        "title": "Run Health Test from Homekit",
         "type": "boolean",
         "default": false,
-        "description": "Display a Health Test button to start a manual Health Test in Flo."
+        "description": "Display a Health Test switch button to start a manual Health Test in Flo."
       },
         "deviceRefresh": {
         "title": "Device Refresh Interval",
         "type": "integer",
-        "default": 90,
+        "default": 60,
         "description": "Poll interval to obtain device updates in seconds. <b>Please note:</b> A very low value may cause lockout to your account and/or API errors.",
         "minimum": 15,
         "maximum": 3600
