@@ -51,8 +51,17 @@ class FloWaterSensor {
     if(leakService == undefined) leakService = this.accessory.addService(this.Service.LeakSensor); 
     leakService.getCharacteristic(this.Characteristic.LeakDetected)
         .on('get', async callback => this.getLeakStatus(callback));
-    leakService.getCharacteristic(this.Characteristic.StatusLowBattery)
-        .on('get', async callback => this.getBatteryStatus(callback));
+
+    // Add battery service
+    var batteryService = this.accessory.getService(this.Service.Battery);
+    if(batteryService == undefined)  batteryService = this.accessory.addService(this.Service.Battery, "battery");
+    batteryService.getCharacteristic(this.Characteristic.StatusLowBattery)
+        .on('get', async callback => this.getStatusLowBattery(callback));
+    batteryService.getCharacteristic(this.Characteristic.BatteryLevel)
+        .on('get', async callback => this.getBatteryLevel(callback));
+
+    // link battery service to leak sensor
+    leakService.addLinkedService(batteryService);
 
     // Check if Temperature and Humidity should be shown in homekit
     var tempService;
@@ -64,14 +73,14 @@ class FloWaterSensor {
       if (tempService == undefined) tempService = this.accessory.addService(this.Service.TemperatureSensor);  
       // create handlers for required characteristics
       tempService.getCharacteristic(this.Characteristic.CurrentTemperature)
-      .on('get', async callback => this.getCurrentTemperature(callback));
+          .on('get', async callback => this.getCurrentTemperature(callback));
 
       // Add Humidity sensor
       humService = this.accessory.getService(this.Service.HumiditySensor);
       if (humService == undefined)  humService = this.accessory.addService(this.Service.HumiditySensor);  
       // create handlers for required characteristics
       humService.getCharacteristic(this.Characteristic.CurrentRelativeHumidity)
-      .on('get', async callback => this.getCurrentRelativeHumidity(callback));
+          .on('get', async callback => this.getCurrentRelativeHumidity(callback));
     }
     else {
       // Remove service if already created in cache accessory
@@ -106,7 +115,7 @@ class FloWaterSensor {
   }
   
   // Battery status Low Battery status and Battery Level.
-  async getBatteryStatus(callback) {
+  async getStatusLowBattery(callback) {
     var currentValue = this.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
     if (this.batteryLevel < 20) currentValue = this.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
     return callback(null, currentValue);
