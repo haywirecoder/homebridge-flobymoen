@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
 
+## v1.0.1 (2021-10-25)
+### Break fixes
+* Fix bug where plug-in was writing to incorrect location (#5)
+
+### Enhancements
+* Add support for battery level for water leak sensors.
+
+## v1.0.0 (2021-09-25)
+### Changes
+* Minor configuration changes
+* Add support to run health check
+
 ## v0.0.3 (2021-04-09)
 ### Break fixes
 * Fix water sensor temperature being displayed incorrectly in Homekit.
