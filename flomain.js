@@ -26,13 +26,15 @@ class FlobyMoem extends EventEmitter {
     deviceRefreshTime;
     sleepRevertMinutes;
     log;
+    storagePath;
     debug;
 
 
-    constructor(log, config, debug) {
+    constructor(log, config, storagePath, debug) {
         super();
         this.log = log || console.log;
         this.debug = debug || console.debug;
+        this.storagePath = storagePath;
         this.tokenRefreshHandle = null;
         this.deviceRefreshHandle = null;
         this.alertRefreshHandle = null;
@@ -49,7 +51,8 @@ class FlobyMoem extends EventEmitter {
 
         // retrieve login storage login inoformation
         // Initializes the storage
-        await storage.init();
+        await storage.init({dir:this.storagePath, forgiveParseErrors: true});
+        
         // Get persist items, if exist...
         this.auth_token.user_id  = await storage.getItem('user_id'); 
         this.auth_token.expiry = await storage.getItem('expiry'); 

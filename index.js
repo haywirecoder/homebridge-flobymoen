@@ -34,8 +34,12 @@ class FloByMoenPlatform {
        // terminate plug-in initization
       return;
     }
+
+    // Returns the path to the Homebridge storage folder.
+    this.storagePath = api.user.storagePath();
+
     // Create FLo engine object to interact with Flo APIs.
-    this.flo = new floengine (log, config, this.debug);
+    this.flo = new floengine (log, config, this.storagePath, this.debug);
     // Login in meetflo portal
     this.log.info("Starting communication with Flo portal");
     this.initialLoad = this.flo.init().then ( () => {
