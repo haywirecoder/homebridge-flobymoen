@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. This projec
 ### Break fixes
 * Fix bug associated with correction of (#5) - "EISDIR: illegal operation on a directory...". (#6).
 
-## Enhancements
+### Enhancements
 * Add support to disable local caching of Flo access token. 
 
 ## v1.0.1 (2021-10-25)
