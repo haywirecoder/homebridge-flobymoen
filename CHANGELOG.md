@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
 
+## v1.0.2 (2021-10-26)
+### Break fixes
+* Fix bug associated with correction of 1.0.1. - "EISDIR: illegal operation on a directory...". (#6)
+
 ## v1.0.1 (2021-10-25)
 ### Break fixes
 * Fix bug where plug-in was writing to incorrect location (#5)
