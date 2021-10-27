@@ -4,19 +4,22 @@ All notable changes to this project will be documented in this file. This projec
 
 ## v1.0.2 (2021-10-26)
 ### Break fixes
-* Fix bug associated with correction of 1.0.1. - "EISDIR: illegal operation on a directory...". (#6)
+* Fix bug associated with correction of (#5) - "EISDIR: illegal operation on a directory...". (#6).
+
+## Enhancements
+* Add support to disable local caching of Flo access token. 
 
 ## v1.0.1 (2021-10-25)
 ### Break fixes
-* Fix bug where plug-in was writing to incorrect location (#5)
+* Fix bug where plug-in was writing to incorrect location (#5).
 
 ### Enhancements
 * Add support for battery level for water leak sensors.
 
 ## v1.0.0 (2021-09-25)
 ### Changes
-* Minor configuration changes
-* Add support to run health check
+* Minor configuration changes.
+* Add support to run health check.
 
 ## v0.0.3 (2021-04-09)
 ### Break fixes
