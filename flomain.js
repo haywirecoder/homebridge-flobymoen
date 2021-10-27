@@ -26,15 +26,15 @@ class FlobyMoem extends EventEmitter {
     deviceRefreshTime;
     sleepRevertMinutes;
     log;
-    storagePath;
+    persistPath;
     debug;
 
 
-    constructor(log, config, storagePath, debug) {
+    constructor(log, config, persistPath, debug) {
         super();
         this.log = log || console.log;
         this.debug = debug || console.debug;
-        this.storagePath = storagePath;
+        this.persistPath = persistPath;
         this.tokenRefreshHandle = null;
         this.deviceRefreshHandle = null;
         this.alertRefreshHandle = null;
@@ -49,14 +49,20 @@ class FlobyMoem extends EventEmitter {
 
     async init() {
 
-        // retrieve login storage login inoformation
-        // Initializes the storage
-        await storage.init({dir:this.storagePath, forgiveParseErrors: true});
-        
-        // Get persist items, if exist...
-        this.auth_token.user_id  = await storage.getItem('user_id'); 
-        this.auth_token.expiry = await storage.getItem('expiry'); 
-        this.auth_token.token = await storage.getItem('token'); 
+        // Retrieve login storage login inoformation
+        if(this.persistPath != undefined)
+        {
+            // Initializes the storage
+            await storage.init({dir:this.persistPath, forgiveParseErrors: true});
+            // Get persist items, if exist...
+            this.auth_token.user_id  = await storage.getItem('user_id'); 
+            this.auth_token.expiry = await storage.getItem('expiry'); 
+            this.auth_token.token = await storage.getItem('token'); 
+            // Set timer to obtain new token
+            this.log.info("Using local cache Flo token.");
+        }
+        else  
+            this.log.info("Local caching of Flo token is disabled.");
 
         // If token not present or expired obtain new token
         if (!this.isLoggedIn()) {
@@ -65,8 +71,6 @@ class FlobyMoem extends EventEmitter {
         }
         else
         {
-            // Set timer to obtain new token
-            this.log.info("Using cache Flo token.");
             var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
             this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
              // Display temporary access 
@@ -119,9 +123,12 @@ class FlobyMoem extends EventEmitter {
             this.auth_token.expiry = Date.now() + ((response.data.tokenExpiration * 1000)/2); 
 
             // store for later use user ID, token and expiration date, if system is restarted for any reason.
-            storage.setItem('user_id',this.auth_token.user_id);
-            storage.setItem('token',this.auth_token.token);
-            storage.setItem('expiry',this.auth_token.expiry);
+            if(this.persistPath != undefined)
+            {
+                storage.setItem('user_id',this.auth_token.user_id);
+                storage.setItem('token',this.auth_token.token);
+                storage.setItem('expiry',this.auth_token.expiry);
+            }
 
             // Display temporary access 
             if (this.debug) this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);

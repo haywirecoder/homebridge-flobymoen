@@ -33,20 +33,25 @@
         "title": " Debug",
         "type": "boolean"
       },
+      "disableCache": {
+        "title": "Disable Caching of Flo Token",
+        "type": "boolean",
+        "default": false
+      },
       "showTemperatureAndHumidity": {
-        "title": "Show Water Sensor Temperature and Humidity in Homekit",
+        "title": "Show Water Sensor Temperature and Humidity in HomeKit",
         "type": "boolean",
         "default": true,
-        "description": "Display Water Sensor(s) area temperature and humidity in Homekit."
+        "description": "Display Water Sensor(s) area temperature and humidity in HomeKit."
       },
         "enableValveControl": {
-        "title": "Enable valve control in Homekit",
+        "title": "Enable valve control in HomeKit",
         "type": "boolean",
         "default": false,
-        "description": "Enable or disable Smart Water Shutoff within Homekit."
+        "description": "Enable or disable Smart Water Shutoff within HomeKit."
       },
         "showHealthTestSwitch": {
-        "title": "Run Health Test from Homekit",
+        "title": "Run Health Test from HomeKit",
         "type": "boolean",
         "default": false,
         "description": "Display a Health Test switch button to start a manual Health Test in Flo."
@@ -113,6 +118,10 @@
       "items": [{
           "key": "debug",
           "description": "To see all messages the Homebridge debug (<code>-D</code>) option must also be enabled. <small>See <a target='_blank' href='https://github.com/homebridge/homebridge-raspbian-image/wiki/How-To-Enable-Debug-or-Insecure-Mode'>https://github.com/homebridge/homebridge-raspbian-image/wiki/How-To-Enable-Debug-or-Insecure-Mode</a></small>"
+        },
+        {
+          "key": "disableCache",
+          "description": "Disabled the storage of Flo access token to local Homebridge server. Refresh token at start-up."
         },
         {
           "key": "excludedDevices",

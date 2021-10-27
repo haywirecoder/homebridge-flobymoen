@@ -25,7 +25,10 @@ class FloByMoenPlatform {
     this.optionalAccessories = [];
     this.api = api;  
     this.refreshInterval = config.deviceRefresh * 1000 || 30000;
+    this.disableCache = config.disableCache ? config.disableCache : false;
+    this.persistPath = undefined;
     this.config = config;
+    
 
     // Check if authentication has been provided.
     if ((!this.config.auth.username) || (!this.config.auth.password))
@@ -35,11 +38,11 @@ class FloByMoenPlatform {
       return;
     }
 
-    // Returns the path to the Homebridge storage folder.
-    this.storagePath = api.user.storagePath();
+    // Returns the path to the Homebridge storage folder, if local storage is enable.
+    if (!this.disableCache) this.persistPath = api.user.persistPath();
 
     // Create FLo engine object to interact with Flo APIs.
-    this.flo = new floengine (log, config, this.storagePath, this.debug);
+    this.flo = new floengine (log, config, this.persistPath, this.debug);
     // Login in meetflo portal
     this.log.info("Starting communication with Flo portal");
     this.initialLoad = this.flo.init().then ( () => {
