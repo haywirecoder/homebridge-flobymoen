@@ -1,4 +1,5 @@
 [![NPM Version](https://img.shields.io/npm/v/homebridge-flobymoen.svg?style=flat-square)](https://www.npmjs.com/package/homebridge-flobymoen)
+[![npm](https://img.shields.io/npm/dt/homebridge-flobymoen.svg?style=flat-square)](https://www.npmjs.com/package/homebridge-flobymoen)
 
 
 <p align="center">
