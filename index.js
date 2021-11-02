@@ -24,16 +24,23 @@ class FloByMoenPlatform {
     this.accessories = [];
     this.optionalAccessories = [];
     this.api = api;  
-    this.refreshInterval = config.deviceRefresh * 1000 || 30000;
+    this.refreshInterval = config.deviceRefresh || 90;
     this.disableCache = config.disableCache ? config.disableCache : false;
     this.persistPath = undefined;
     this.config = config;
     
 
     // Check if authentication has been provided.
-    if ((!this.config.auth.username) || (!this.config.auth.password))
-    {
-      this.log.error('Flo authentication information not provided.');
+    try{
+        if ((this.config.auth.username == "") || (this.config.auth.password == ""))
+        {
+          this.log.error('Flo authentication information not provided.');
+          // terminate plug-in initization
+          return;
+        }
+      }
+    catch(err) {
+      this.log.error('Flo authentication information missing. Please configure Plug-in.');
        // terminate plug-in initization
       return;
     }
@@ -62,13 +69,17 @@ class FloByMoenPlatform {
       // When login completes discover devices with flo account
       this.initialLoad.then(() => {
           // Discover devices
-          this.log.info("Initiaizing Flo devices...")
-          this.flo.discoverDevices().then (() => {
-          // Once devices are discovered update Homekit assessories
-          this.refreshAccessories();
-          this.log.info(`Flo device updates complete, background polling process started.\nDevice will be polled each ${Math.floor((config.deviceRefresh / 60))} min(s) ${Math.floor((config.deviceRefresh % 60))} second(s).`);      
+          if (this.flo.isLoggedIn()){
+            this.log.info("Initiaizing Flo devices...")
+            this.flo.discoverDevices().then (() => {
+            // Once devices are discovered update Homekit assessories
+            this.refreshAccessories();
+            this.log.info(`Flo device updates complete, background polling process started.\nDevice will be polled each ${Math.floor((this.refreshInterval / 60))} min(s) ${Math.floor((this.refreshInterval % 60))} second(s).`);     
+            })
+          }
+          else
+          this.log.error("Plug-in not started! Please check your configuration.")
         })
-      })
     });
   }
 

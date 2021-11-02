@@ -38,7 +38,7 @@ class FlobyMoem extends EventEmitter {
         this.tokenRefreshHandle = null;
         this.deviceRefreshHandle = null;
         this.alertRefreshHandle = null;
-        this.deviceRefreshTime = config.deviceRefresh * 1000 || 30000;
+        this.deviceRefreshTime = config.deviceRefresh * 1000 || 90000;
         this.sleepRevertMinutes = config.sleepRevertMinutes || 120;
         this.excludedDevices = config.excludedDevices || [];
         this.auth_token.username = config.auth.username;
@@ -60,6 +60,7 @@ class FlobyMoem extends EventEmitter {
             this.auth_token.token = await storage.getItem('token'); 
             // Set timer to obtain new token
             this.log.info("Using local cache Flo token.");
+           
         }
         else  
             this.log.info("Local caching of Flo token is disabled.");
@@ -73,7 +74,7 @@ class FlobyMoem extends EventEmitter {
         {
             var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
             this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
-             // Display temporary access 
+            // Display temporary access 
             if (this.debug) this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
             // Build query header for future transactions
             this.auth_token.header = {
@@ -84,7 +85,6 @@ class FlobyMoem extends EventEmitter {
                     'authorization': this.auth_token.token
                     }
             };
-        
 
         }
         return true;
@@ -141,6 +141,11 @@ class FlobyMoem extends EventEmitter {
                     'authorization': this.auth_token.token
                     }
             };
+            // Set timer to obtain new token
+            var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
+            // Display refreshing token information 
+            this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} mins(s).`);
+            return true;
         
         }
         catch(err) {
@@ -148,13 +153,6 @@ class FlobyMoem extends EventEmitter {
             this.log.error("Login Error: " + err.message);
             return false;
         } 
-
-        // Set timer to obtain new token
-        var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
-        // Display refreshing token information 
-        this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} mins(s).`);
-        ///this.tokenRefreshHandle = setTimeout(() => this.refreshToken(), refreshTimeoutmillis); 
-        return true;
         
     };
 

@@ -59,7 +59,7 @@
         "deviceRefresh": {
         "title": "Device Refresh Interval",
         "type": "integer",
-        "default": 60,
+        "default": 90,
         "description": "Poll interval to obtain device updates in seconds. <b>Please note:</b> A very low value may cause lockout to your account and/or API errors.",
         "minimum": 15,
         "maximum": 3600
