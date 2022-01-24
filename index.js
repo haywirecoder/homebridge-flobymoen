@@ -19,7 +19,6 @@ class FloByMoenPlatform {
   constructor(log, config, api) {
     this.log = log;
     this.name = config.name;
-    this.debug = config.debug || false;
     this.devices = [];
     this.accessories = [];
     this.optionalAccessories = [];
@@ -30,17 +29,17 @@ class FloByMoenPlatform {
     this.config = config;
     
 
-    // Check if authentication has been provided.
+    // Check if authentication information has been provided.
     try{
         if ((this.config.auth.username == "") || (this.config.auth.password == ""))
         {
-          this.log.error('Flo authentication information not provided.');
+          this.log.error('Plug-in configuration error: Flo authentication information not provided.');
           // terminate plug-in initization
           return;
         }
       }
     catch(err) {
-      this.log.error('Flo authentication information missing. Please configure Plug-in.');
+      this.log.error('Plug-in configuration error: Flo authentication information not provided.');
        // terminate plug-in initization
       return;
     }
@@ -49,11 +48,11 @@ class FloByMoenPlatform {
     if (!this.disableCache) this.persistPath = api.user.persistPath();
 
     // Create FLo engine object to interact with Flo APIs.
-    this.flo = new floengine (log, config, this.persistPath, this.debug);
+    this.flo = new floengine (log, config, this.persistPath);
     // Login in meetflo portal
     this.log.info("Starting communication with Flo portal");
     this.initialLoad = this.flo.init().then ( () => {
-      if (this.debug) this.log.debug('Initialization Successful.');
+      this.log.debug('Initialization Successful.');
     }).catch(err => {
               this.log.error('Flo API Initization Failure:', err);
                // terminate plug-in initization
@@ -78,7 +77,8 @@ class FloByMoenPlatform {
             })
           }
           else
-          this.log.error("Plug-in not started! Please check your configuration.")
+            // User login wasn't success graceful end initization. 
+            this.log.error("Plug-in configuration error: Flo authentication error, please review your authenication information.'")
         })
     });
   }
@@ -151,18 +151,18 @@ class FloByMoenPlatform {
   //Add accessory to homekit dashboard
   addAccessory(device) {
 
-    if (this.debug) this.log.debug('Add accessory');
+    this.log.debug('Add accessory');
         try {
           this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [device.accessory]);
           this.accessories.push(device.accessory);
         } catch (err) {
-            this.log.error(`An error occurred while adding accessory: ${err}`);
+            this.log.error(`Flo load Error: An error occurred while adding accessory: ${err}`);
         }
   }
 
   //Remove accessory to homekit dashboard
   removeAccessory(accessory, updateIndex) {
-      this.log.warn('Removing accessory:',accessory.displayName );
+      this.log.warn('Flo load Removing accessory:',accessory.displayName );
       if (accessory) {
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
@@ -195,7 +195,7 @@ class FloByMoenPlatform {
   // This function is invoked when homebridge restores cached accessories from disk at startup.
   // It should be used to setup event handlers for characteristics and update respective values.
   configureAccessory(accessory) {
-    if (this.debug) this.log.debug('Loading accessory from cache:', accessory.displayName);
+    this.log.debug('Loading accessory from cache:', accessory.displayName);
     // add the restored accessory to the accessories cache so we can track if it has already been registered
     this.accessories.push(accessory);
   }

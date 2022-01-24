@@ -27,13 +27,10 @@ class FlobyMoem extends EventEmitter {
     sleepRevertMinutes;
     log;
     persistPath;
-    debug;
 
-
-    constructor(log, config, persistPath, debug) {
+    constructor(log, config, persistPath) {
         super();
         this.log = log || console.log;
-        this.debug = debug || console.debug;
         this.persistPath = persistPath;
         this.tokenRefreshHandle = null;
         this.deviceRefreshHandle = null;
@@ -59,11 +56,11 @@ class FlobyMoem extends EventEmitter {
             this.auth_token.expiry = await storage.getItem('expiry'); 
             this.auth_token.token = await storage.getItem('token'); 
             // Set timer to obtain new token
-            this.log.info("Using local cache Flo token.");
+            this.log.info("Flo Info: Using local cache Flo token.");
            
         }
         else  
-            this.log.info("Local caching of Flo token is disabled.");
+            this.log.info("Flo Info: Local caching of Flo token is disabled.");
 
         // If token not present or expired obtain new token
         if (!this.isLoggedIn()) {
@@ -73,9 +70,9 @@ class FlobyMoem extends EventEmitter {
         else
         {
             var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
-            this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
+            this.log.info(`Flo Info: Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
             // Display temporary access 
-            if (this.debug) this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
+            this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
             // Build query header for future transactions
             this.auth_token.header = {
             headers: {
@@ -108,7 +105,7 @@ class FlobyMoem extends EventEmitter {
     // This method login, gets the token and store for later transaction.
     async refreshToken() {
 
-        this.log.info("Refreshing Token...");
+        this.log.info("Flo Status: Refreshing Token...");
         
         try {
            
@@ -131,7 +128,7 @@ class FlobyMoem extends EventEmitter {
             }
 
             // Display temporary access 
-            if (this.debug) this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
+            this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
              // Build query header for future transactions
             this.auth_token.header = {
             headers: {
@@ -141,16 +138,17 @@ class FlobyMoem extends EventEmitter {
                     'authorization': this.auth_token.token
                     }
             };
+
             // Set timer to obtain new token
             var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
             // Display refreshing token information 
-            this.log.info(`Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} mins(s).`);
+            this.log.info(`Flo Info: Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} mins(s).`);
             return true;
         
         }
         catch(err) {
             // Something went wrong, display message and return negative return code
-            this.log.error("Login Error: " + err.message);
+            this.log.error("Flo Login Error: " + err.message);
             return false;
         } 
         
@@ -181,9 +179,9 @@ class FlobyMoem extends EventEmitter {
                         try {
                             const device_response = await axios.get(url, this.auth_token.header);
                             var device_info = device_response;
-                            if (this.debug) this.log.debug("Device Raw Data: ", device_info.data);
+                            this.log.debug("Device Raw Data: ", device_info.data);
                             if (this.excludedDevices.includes(device_info.data.serialNumber)) {
-                                this.log.info(`Excluding sensor with serial '${device_info.data.serialNumber}'`);
+                                this.log.info(`Flo Info: Excluding sensor with serial '${device_info.data.serialNumber}'`);
                                
                             } else {
                                 // create flo device object
@@ -222,13 +220,13 @@ class FlobyMoem extends EventEmitter {
                             }
                         } 
                         catch(err) {
-                            this.log.error("Device Error: " + err.message);
+                            this.log.error("Flo Device Error: " + err.message);
                         };
                     }
                 }
                 return true;
         } catch(err) {
-            this.log.error("Location Load Error: " + err.message);
+            this.log.error("Flo Location Load Error: " + err.message);
             return false;
         }
 
@@ -242,7 +240,7 @@ class FlobyMoem extends EventEmitter {
             await this.refreshToken();
         }
         if (this.isBusy) {
-            this.info.warn("System Mode: Another process is already updating the Flo system.")
+            this.log.warn("Flo System Mode: Another process is already updating the Flo system.")
             return;
         }
         this.isBusy = true;
@@ -263,8 +261,8 @@ class FlobyMoem extends EventEmitter {
         var response;
         try {
             response = await axios.post(url, modeRequestbody, this.auth_token.header);
-            this.log.info("System Monitoring mode change to : " , mode);
-            if (this.debug) this.log.debug(response);
+            this.log.info("Flo System Mode: System Monitoring mode change to : " , mode);
+            this.log.debug(response);
         } catch(err)
         {
             this.log.error("Error: " + err.message);
@@ -272,13 +270,14 @@ class FlobyMoem extends EventEmitter {
         this.isBusy = false;
        
     };
+
     async setValve(deviceid, mode) {
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
             await this.refreshToken();
         }
         if (this.isBusy) {
-            this.info.warn("System Mode: Another plug-in process is already updating the Flo system.")
+            this.log.warn("Flo System Mode: Another plug-in process is already updating the Flo system.")
             return;
         }
         this.isBusy = true;
@@ -293,8 +292,8 @@ class FlobyMoem extends EventEmitter {
         var response;
         try {
             response = await axios.post(url, modeRequestbody, this.auth_token.header);
-            this.log.info("Flo valve now: " , mode);
-            if (this.debug) this.log.debug(response);
+            this.log.info("Flo Valve Now: " , mode);
+            this.log.debug(response);
 
         } catch(err) {
             this.log.error("Error: " + err.message);
@@ -313,9 +312,9 @@ class FlobyMoem extends EventEmitter {
         // Run health check based on user request 
         var response;
         try {
-            this.log.info("Running Health Check. This will take up to 4 mins.");
+            this.log.info("Flo Health: Running Health Check. This will take up to 4 mins.");
             response = await axios.post(url,"", this.auth_token.header);
-            if (this.debug) this.log.debug(response);
+            this.log.debug(response);
         } catch(err)
         {
            this.log.error("Error: " + err.message);
@@ -323,6 +322,9 @@ class FlobyMoem extends EventEmitter {
        
     };
 
+    // *******
+    // Not currently used
+    // *******
     async getSystemAlerts() {
         
         // Do we have valid sessions? 
@@ -357,14 +359,14 @@ class FlobyMoem extends EventEmitter {
         // }
     };
 
-    async refreshDevice(device) {
+    async refreshDevice(deviceIndex) {
 
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
             await this.refreshToken();
         }
         // Get device
-        var url = FLO_V2_API_BASE + "/devices/" + device.deviceid;     
+        var url = FLO_V2_API_BASE + "/devices/" + this.flo_devices[deviceIndex].deviceid;     
                
         try {
 
@@ -372,47 +374,47 @@ class FlobyMoem extends EventEmitter {
             
             // Has the object been updated? If the device has not been heard from, no change is needed
             let deviceUpdateTime = new Date(device_info.data.lastHeardFromTime);
-            if (deviceUpdateTime.getTime() == device.lastUpdate.getTime()) {
-                if (this.debug) this.log.debug(device.name + " has no updates.");
+            if (deviceUpdateTime.getTime() == this.flo_devices[deviceIndex].lastUpdate.getTime()) {
+                this.log.debug(this.flo_devices[deviceIndex].name + " has no updates.");
                 return true;
             }
             // Update key information about device
-            if (this.debug) this.log.debug("Device Updated Data: ", device_info.data);
+           this.log.debug("Device Updated Data: ", device_info.data);
 
-            device.lastUpdate = new Date(device_info.data.lastHeardFromTime);
-            device.notifications = device_info.data.notifications.pending;
+            this.flo_devices[deviceIndex].lastUpdate = new Date(device_info.data.lastHeardFromTime);
+            this.flo_devices[deviceIndex].notifications = device_info.data.notifications.pending;
         
             // determine type of device and update the proper data elements
-            switch (device.type) {
+            switch (this.flo_devices[deviceIndex].type) {
                 case FLO_WATERSENSOR:
                     // homekit expect temperatures in celuis and allow homekit to perform conversion if needed.
-                    device.temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
-                    device.humidity = device_info.data.telemetry.current.humidity;
+                    this.flo_devices[deviceIndex].temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
+                    this.flo_devices[deviceIndex].humidity = device_info.data.telemetry.current.humidity;
                     // Return whether water is detected, for leak detectors.
-                    device.waterdetect = device_info.data.fwProperties.telemetry_water;
+                    this.flo_devices[deviceIndex].waterdetect = device_info.data.fwProperties.telemetry_water;
                     // Return the battery level for battery-powered device, e.g. leak detectors
-                    device.batterylevel = device_info.data.battery.level;
+                    this.flo_devices[deviceIndex].batterylevel = device_info.data.battery.level;
                 break;
                 case FLO_SMARTWATER:
-                    device.psi = device_info.data.telemetry.current.psi;
-                    device.gpm = device_info.data.telemetry.current.gpm;
-                    device.systemCurrentState = device_info.data.systemMode.lastKnown;
-                    device.systemTargetState = device_info.data.systemMode.target;
-                    device.valveCurrentState = device_info.data.valve.lastKnown;
-                    device.valveTargetState = device_info.data.valve.target;
+                    this.flo_devices[deviceIndex].psi = device_info.data.telemetry.current.psi;
+                    this.flo_devices[deviceIndex].gpm = device_info.data.telemetry.current.gpm;
+                    this.flo_devices[deviceIndex].systemCurrentState = device_info.data.systemMode.lastKnown;
+                    this.flo_devices[deviceIndex].systemTargetState = device_info.data.systemMode.target;
+                    this.flo_devices[deviceIndex].valveCurrentState = device_info.data.valve.lastKnown;
+                    this.flo_devices[deviceIndex].valveTargetState = device_info.data.valve.target;
                 break;
             } 
            
             // change were detected updata device data elements and trigger updata.
-            this.emit(device.serialNumber, {
-                device: device
+            this.emit(this.flo_devices[deviceIndex].serialNumber, {
+                device: this.flo_devices[deviceIndex]
             });
             return true;
                             
         } 
         catch(err) {
                 // Something went wrong, display error and return.
-                this.log.error("Device Refresh Error:  " + err.message);
+                this.log.error("Flo Device Refresh Error:  " + err.message);
                 return false;
         };
     };
@@ -427,7 +429,7 @@ class FlobyMoem extends EventEmitter {
              this.deviceRefreshHandle = null;
          }
          if (this.isBusy) {
-            this.info.warn("Device Update: Another process is already updating the Flo system.\n Skipping Interval Update.")
+            this.log.warn("Flo Device Update: Another process is already updating the Flo system.\n Skipping Interval Update.")
             this.deviceRefreshHandle = setTimeout(() => this.backgroundRefresh(), this.deviceRefreshTime); 
             return;
         }
@@ -437,10 +439,8 @@ class FlobyMoem extends EventEmitter {
             await this.refreshToken();
         }
         // Updata all data elements
-        var loc_device;
         for (var i = 0; i < this.flo_devices.length; i++) {
-            loc_device = this.flo_devices[i];
-            await this.refreshDevice(loc_device);
+            await this.refreshDevice(i);
         }
        
         // Set timer to refresh devices
@@ -448,7 +448,9 @@ class FlobyMoem extends EventEmitter {
        
 
     };
-
+    // *******
+    // Not currently used
+    // *******
     async generateHeartBeat()
     {
         // Create browser header information to ping Flo cloud service to refreshing data from flo
@@ -476,7 +478,7 @@ class FlobyMoem extends EventEmitter {
             this.log("Heatbeat posted successful.")
         } catch(err)
         {
-            this.log.error("Error: " + err.message);
+            this.log.error("Flo Error: " + err.message);
             
         }
 
