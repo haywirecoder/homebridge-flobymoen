@@ -6,7 +6,6 @@ class FloOptionSwitch {
     this.Service = Service;
     this.id = device.serialNumber + '.sw';
     this.log = log;
-    this.debug = config.debug;
     this.deviceid = device.deviceid;
     this.busy = false;
     this.uuid = UUIDGen.generate(this.id);

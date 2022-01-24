@@ -4,11 +4,10 @@ class FloWaterSensor {
     constructor(flo, device, log, config, Service, Characteristic, UUIDGen) {
     this.Characteristic = Characteristic;
     this.Service = Service;
-    this.id = device.serialNumber;
+    this.id = device.serialNumber.toString();
     this.log = log;
-    this.debug = config.debug;
     this.name = device.name;
-    this.uuid = UUIDGen.generate(device.serialNumber);
+    this.uuid = UUIDGen.generate(this.id);
     this.currentTemperature = device.temperature || -180;
     this.currentHumidity = device.humidity || 0.0;
     this.leakDected = false;
@@ -20,7 +19,7 @@ class FloWaterSensor {
 
   refreshState(eventData)
   {
-    if (this.debug) this.log.debug(`Device updated requested: ` , eventData);
+    this.log.debug(`Device updated requested: ` , eventData);
     this.currentTemperature = eventData.device.temperature || -180;
     this.currentHumidity = eventData.device.humidity || 0.0;
     this.batteryLevel = eventData.device.batterylevel || 0;
@@ -33,9 +32,8 @@ class FloWaterSensor {
       leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_DETECTED);
     }
      else  { 
-
-       this.leakDected = false;
-       leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
+      this.leakDected = false;
+      leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
     }
   }
 
@@ -54,7 +52,7 @@ class FloWaterSensor {
 
     // Add battery service
     var batteryService = this.accessory.getService(this.Service.Battery);
-    if(batteryService == undefined)  batteryService = this.accessory.addService(this.Service.Battery, "battery");
+    if(batteryService == undefined)  batteryService = this.accessory.addService(this.Service.Battery);
     batteryService.getCharacteristic(this.Characteristic.StatusLowBattery)
         .on('get', async callback => this.getStatusLowBattery(callback));
     batteryService.getCharacteristic(this.Characteristic.BatteryLevel)
@@ -98,20 +96,17 @@ class FloWaterSensor {
     } else {
       return callback(null, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED); 
     }
-    
   }
 
   //Handle requests to get the current value of the "Current temperature" characteristic
   async getCurrentTemperature(callback) {
     // set this to a valid value for CurrentTemperature
     return callback(null,this.currentTemperature);
-    
   }
 
   //Handle requests to get the current value of the "Current Relative Humidity" characteristic
   async getCurrentRelativeHumidity (callback) {
     return callback(null,this.currentHumidity);
-
   }
   
   // Battery status Low Battery status and Battery Level.

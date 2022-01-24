@@ -9,9 +9,8 @@ class FloSmartWater {
     this.Characteristic = Characteristic;
     this.Service = Service;
     this.log = log;
-    this.debug = config.debug;
     this.name = device.name;
-    this.id = device.serialNumber;
+    this.id = device.serialNumber.toString();
     this.location = device.location;
     this.valveStatus = device.valveTargetState;
     // Current state does not provide correct state, using TargetState
@@ -20,7 +19,7 @@ class FloSmartWater {
     this.systemTargetState = device.systemTargetState;
     this.gallonsPerMin = device.gpm;
     this.deviceid = device.deviceid;
-    this.uuid = UUIDGen.generate(device.serialNumber);
+    this.uuid = UUIDGen.generate(this.id);
 
     this.VALVE_ACTIVE_STATE = {
       'closed': Characteristic.Active.INACTIVE,
@@ -43,6 +42,7 @@ class FloSmartWater {
       'sleep': Characteristic.SecuritySystemTargetState.DISARM,
       'home': Characteristic.SecuritySystemTargetState.STAY_ARM,
       'away': Characteristic.SecuritySystemTargetState.AWAY_ARM,
+      'alarm': Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED
     };
 
     this.TARGET_HOMEKIT_TO_FLO = {
@@ -62,7 +62,7 @@ class FloSmartWater {
 
   refreshState(eventData)
   {
-    if (this.debug) this.log.debug(`Device updated requested: ` , eventData);
+    this.log.debug(`Device updated requested: ` , eventData);
     this.valveStatus = eventData.device.valveTargetState;
     this.gallonsPerMin = eventData.device.gpm;
     // get security system
@@ -70,10 +70,11 @@ class FloSmartWater {
     const valveService = this.accessory.getService(this.Service.Valve);
     if(eventData.device.notifications.criticalCount > 0) {
       this.systemCurrentState = 'alarm';
+      this.systemTargetState = 'alarm';
+
     }
     else {
       // Current state does not provide correct state, using TargetState
-      // this.systemCurrentState = eventData.device.systemCurrentState;
       this.systemCurrentState = eventData.device.systemTargetState;
       this.systemTargetState = eventData.device.systemTargetState;
     }
