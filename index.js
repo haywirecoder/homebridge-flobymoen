@@ -181,7 +181,7 @@ class FloByMoenPlatform {
     {   
       let accessory = cachedAccessory[i];
       // determine if accessory is currently a device in flo system, thus should remain
-      foundAccessory = this.flo.flo_devices.find(device => UUIDGen.generate(device.serialNumber) === accessory.UUID)
+      foundAccessory = this.flo.flo_devices.find(device => UUIDGen.generate(device.deviceid.toString()) === accessory.UUID)
       if (!foundAccessory) {
         // determine if an optional compoment, thus should remain
         foundAccessory = this.optionalAccessories.find(optionalAccessory => optionalAccessory.uuid === accessory.UUID);

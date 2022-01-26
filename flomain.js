@@ -184,39 +184,44 @@ class FlobyMoem extends EventEmitter {
                                 this.log.info(`Flo Info: Excluding sensor with serial '${device_info.data.serialNumber}'`);
                                
                             } else {
-                                // create flo device object
-                                var device = {};
-                                // Store key information about device
-                                device.name = device_info.data.nickname;
-                                device.deviceModel = device_info.data.deviceModel;
-                                device.type = device_info.data.deviceType;
-                                device.serialNumber = device_info.data.serialNumber;
-                                device.location = device_info.data.location.id;
-                                device.deviceid = device_info.data.id;
-                                device.notifications = device_info.data.notifications.pending;
-                                device.lastUpdate = new Date(device_info.data.lastHeardFromTime);
-                                // determine type of device and set proper data elements
-                                switch (device_info.data.deviceType) {
-                                    case FLO_WATERSENSOR:
-                                        // homekit expect temperatures in celuis and allow homekit to perform conversion if needed.
-                                        device.temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
-                                        device.humidity = device_info.data.telemetry.current.humidity;
-                                        // Return whether water is detected, for leak detectors.
-                                        device.waterdetect = device_info.data.fwProperties.telemetry_water;
-                                        // Return the battery level for battery-powered device, e.g. leak detectors
-                                        device.batterylevel = device_info.data.battery.level;
-                                        break;
-                                    case FLO_SMARTWATER:
-                                        device.psi = device_info.data.telemetry.current.psi;
-                                        device.gpm = device_info.data.telemetry.current.gpm;
-                                        device.systemCurrentState = device_info.data.systemMode.lastKnown;
-                                        device.systemTargetState = device_info.data.systemMode.target;
-                                        device.valveCurrentState = device_info.data.valve.lastKnown;
-                                        device.valveTargetState = device_info.data.valve.target;
-                                        break;
-                                } 
-                                // Store device in array, the array will store all of users device in all location.
-                                this.flo_devices.push(device);
+                                if (device_info.data.id != undefined) {
+                                    // create flo device object
+                                    var device = {};
+                                    // Store key information about device
+                                    device.name = device_info.data.nickname;
+                                    device.deviceModel = device_info.data.deviceModel || "";
+                                    device.type = device_info.data.deviceType;
+                                    device.serialNumber = device_info.data.serialNumber || "";
+                                    device.location = device_info.data.location.id;
+                                    device.deviceid = device_info.data.id;
+                                    device.notifications = device_info.data.notifications.pending;
+                                    device.lastUpdate = new Date(device_info.data.lastHeardFromTime);
+                                    // determine type of device and set proper data elements
+                                    switch (device_info.data.deviceType) {
+                                        case FLO_WATERSENSOR:
+                                            // homekit expect temperatures in celuis and allow homekit to perform conversion if needed.
+                                            device.temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
+                                            device.humidity = device_info.data.telemetry.current.humidity;
+                                            // Return whether water is detected, for leak detectors.
+                                            device.waterdetect = device_info.data.fwProperties.telemetry_water;
+                                            // Return the battery level for battery-powered device, e.g. leak detectors
+                                            device.batterylevel = device_info.data.battery.level;
+                                            break;
+                                        case FLO_SMARTWATER:
+                                            device.psi = device_info.data.telemetry.current.psi;
+                                            device.gpm = device_info.data.telemetry.current.gpm;
+                                            device.systemCurrentState = device_info.data.systemMode.lastKnown;
+                                            device.systemTargetState = device_info.data.systemMode.target;
+                                            device.valveCurrentState = device_info.data.valve.lastKnown;
+                                            device.valveTargetState = device_info.data.valve.target;
+                                            break;
+                                    } 
+                                    // Store device in array, the array will store all of users device in all location.
+                                    this.log.debug("Adding Device: ", device.deviceid);
+                                    this.flo_devices.push(device);
+                                }
+                                else
+                                    this.log.error("Flo Device Error: " + device_info.data);
                             }
                         } 
                         catch(err) {
@@ -406,7 +411,7 @@ class FlobyMoem extends EventEmitter {
             } 
            
             // change were detected updata device data elements and trigger updata.
-            this.emit(this.flo_devices[deviceIndex].serialNumber, {
+            this.emit(this.flo_devices[deviceIndex].deviceid, {
                 device: this.flo_devices[deviceIndex]
             });
             return true;
