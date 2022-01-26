@@ -4,17 +4,18 @@ class FloWaterSensor {
     constructor(flo, device, log, config, Service, Characteristic, UUIDGen) {
     this.Characteristic = Characteristic;
     this.Service = Service;
-    this.id = device.serialNumber.toString();
+    this.serialNumber = device.serialNumber;
     this.log = log;
     this.name = device.name;
-    this.uuid = UUIDGen.generate(this.id);
     this.currentTemperature = device.temperature || -180;
     this.currentHumidity = device.humidity || 0.0;
     this.leakDected = false;
     this.batteryLevel = device.batterylevel || 0;
     this.IsTemperatureAndHumidity = config.showTemperatureAndHumidity ? config.showTemperatureAndHumidity : true;
     this.flo = flo;
-    this.flo.on(this.id, this.refreshState.bind(this));
+    this.deviceid = device.deviceid.toString();
+    this.uuid = UUIDGen.generate(this.deviceid);
+    this.flo.on(this.deviceid, this.refreshState.bind(this));
   }
 
   refreshState(eventData)
@@ -42,7 +43,7 @@ class FloWaterSensor {
     this.accessory.getService(this.Service.AccessoryInformation)
         .setCharacteristic(this.Characteristic.Manufacturer, 'Moen')
         .setCharacteristic(this.Characteristic.Model, 'Water Sensor')
-        .setCharacteristic(this.Characteristic.SerialNumber, this.id);
+        .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber);
 
     // Add leak sensor
     var leakService = this.accessory.getService(this.Service.LeakSensor);

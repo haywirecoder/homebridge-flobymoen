@@ -10,16 +10,14 @@ class FloSmartWater {
     this.Service = Service;
     this.log = log;
     this.name = device.name;
-    this.id = device.serialNumber.toString();
+    this.serialNumber = device.serialNumber;
     this.location = device.location;
     this.valveStatus = device.valveTargetState;
-    // Current state does not provide correct state, using TargetState
-    // this.systemCurrentState = device.systemCurrentState;
     this.systemCurrentState = device.systemTargetState;
     this.systemTargetState = device.systemTargetState;
     this.gallonsPerMin = device.gpm;
-    this.deviceid = device.deviceid;
-    this.uuid = UUIDGen.generate(this.id);
+    this.deviceid = device.deviceid.toString();
+    this.uuid = UUIDGen.generate(this.deviceid);
 
     this.VALVE_ACTIVE_STATE = {
       'closed': Characteristic.Active.INACTIVE,
@@ -56,7 +54,7 @@ class FloSmartWater {
     
     this.IsValveControlEnabled = config.enableValveControl ? config.enableValveControl : false;  
     this.flo = flo;
-    this.flo.on(this.id, this.refreshState.bind(this));
+    this.flo.on(this.deviceid, this.refreshState.bind(this));
   }
 
 
@@ -94,7 +92,7 @@ class FloSmartWater {
     this.accessory.getService(this.Service.AccessoryInformation)
         .setCharacteristic(this.Characteristic.Manufacturer, 'Moen')
         .setCharacteristic(this.Characteristic.Model, 'Smart Water Shutoff')
-        .setCharacteristic(this.Characteristic.SerialNumber, this.id);
+        .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber);
 
     var securityService = this.accessory.getService(this.Service.SecuritySystem);
     if(securityService == undefined) securityService = this.accessory.addService(this.Service.SecuritySystem,'System Mode');
