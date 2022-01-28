@@ -68,7 +68,7 @@
         "title": "Sleep Time",
         "type": "integer",
         "default": 120,
-        "description": "Sleep Mode is a system mode that quiets all monitoring and alerting, effectively putting the Flo System to sleep. This value represents the lenght of time to place the system in sleep mode.",
+        "description": "Sleep Mode is a system mode that quiets all monitoring and alerting, effectively putting the Flo System to sleep. This value represents the length of time to place the system in sleep mode.",
         "oneOf": [{
           "title": "2 Hours",
           "enum": [
