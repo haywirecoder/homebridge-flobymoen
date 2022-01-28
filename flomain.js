@@ -14,6 +14,7 @@ const FLO_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWeb
 
 const FLO_WATERSENSOR ='puck_oem';
 const FLO_SMARTWATER = 'flo_device_v2';
+const FLO_PINGMIN = 3590000;
 
 class FlobyMoem extends EventEmitter {
     auth_token = {};
@@ -36,6 +37,7 @@ class FlobyMoem extends EventEmitter {
         this.deviceRefreshHandle = null;
         this.alertRefreshHandle = null;
         this.deviceRefreshTime = config.deviceRefresh * 1000 || 90000;
+        this.pingRefreshTime = config.pingRefresh * 3600000 || 0;
         this.sleepRevertMinutes = config.sleepRevertMinutes || 120;
         this.excludedDevices = config.excludedDevices || [];
         this.auth_token.username = config.auth.username;
@@ -92,6 +94,13 @@ class FlobyMoem extends EventEmitter {
     {
         // Set time to refresh devices
        this.deviceRefreshHandle = setTimeout(() => this.backgroundRefresh(), this.deviceRefreshTime); 
+     
+    };
+
+    startPingProcess()
+    {
+        // Set time to send ping for cloud service to obtain/update data 
+        if (this.pingRefreshTime > FLO_PINGMIN) this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 
      
     };
 
@@ -189,9 +198,9 @@ class FlobyMoem extends EventEmitter {
                                     var device = {};
                                     // Store key information about device
                                     device.name = device_info.data.nickname;
-                                    device.deviceModel = device_info.data.deviceModel || "";
+                                    device.deviceModel = device_info.data.deviceModel || "NA";
                                     device.type = device_info.data.deviceType;
-                                    device.serialNumber = device_info.data.serialNumber || "";
+                                    device.serialNumber = device_info.data.serialNumber || "NA";
                                     device.location = device_info.data.location.id;
                                     device.deviceid = device_info.data.id;
                                     device.notifications = device_info.data.notifications.pending;
@@ -213,7 +222,7 @@ class FlobyMoem extends EventEmitter {
                                             device.systemCurrentState = device_info.data.systemMode.lastKnown;
                                             device.systemTargetState = device_info.data.systemMode.target;
                                             device.valveCurrentState = device_info.data.valve.lastKnown;
-                                            device.valveTargetState = device_info.data.valve.target;
+                                            device.valveTargetState = device_info.data.valve.target || device.valveCurrentState;
                                             break;
                                     } 
                                     // Store device in array, the array will store all of users device in all location.
@@ -453,10 +462,10 @@ class FlobyMoem extends EventEmitter {
        
 
     };
-    // *******
-    // Not currently used
-    // *******
-    async generateHeartBeat()
+   
+
+    // Send a presence ping to Flo, to force device updates.
+    async generatePing()
     {
         // Create browser header information to ping Flo cloud service to refreshing data from flo
         var header = { 
@@ -473,29 +482,23 @@ class FlobyMoem extends EventEmitter {
             'Referer': 'https://user.meetflo.com/',
             'Accept-Language': 'en-US,en;q=0.9,es;q=0.8'
         }
-        var heatbeatrequest = {
+        var pingrequest = {
             ...this.auth_token.header,
             ...header
         }
-        // Generate presence heatbeat
+        // Generate presence ping
         try {
-            const response = await axios.post(FLO_PRESENCE_HEARTBEAT,"", heatbeatrequest);
-            this.log("Heatbeat posted successful.")
+            const response = await axios.post(FLO_PRESENCE_HEARTBEAT,"", pingrequest);
+            this.log("Presence ping successful.")
         } catch(err)
         {
             this.log.error("Flo Error: " + err.message);
             
         }
 
-    }
-   InAlertsStatus(device)
-    {
-        if (device.notifications.pending.criticalCount > 0)
-            return true;
-        else    
-            return false;
+       this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 
 
-    };
+    }
 }
           
 module.exports = FlobyMoem;
