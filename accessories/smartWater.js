@@ -51,7 +51,8 @@ class FloSmartWater {
     };
     this.VALID_CURRENT_STATE_VALUES = [Characteristic.SecuritySystemCurrentState.STAY_ARM, Characteristic.SecuritySystemCurrentState.AWAY_ARM, Characteristic.SecuritySystemCurrentState.DISARMED, Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED];
     this.VALID_TARGET_STATE_VALUES = [Characteristic.SecuritySystemTargetState.STAY_ARM, Characteristic.SecuritySystemTargetState.AWAY_ARM, Characteristic.SecuritySystemTargetState.DISARM];
-    
+    this.systemFault = Characteristic.StatusFault.NO_FAULT;
+    this.IsWarningAsCritical = config.treatWarningAsCritical ? config.treatWarningAsCritical : false;  
     this.IsValveControlEnabled = config.enableValveControl ? config.enableValveControl : false;  
     this.flo = flo;
     this.flo.on(this.deviceid, this.refreshState.bind(this));
@@ -61,7 +62,7 @@ class FloSmartWater {
   refreshState(eventData)
   {
     this.log.debug(`Device updated requested: ` , eventData);
-    this.valveStatus = eventData.device.valveTargetState;
+    this.valveStatus = eventData.device.valveCurrentState;
     this.gallonsPerMin = eventData.device.gpm;
     // get security system
     const securitySevice = this.accessory.getService(this.Service.SecuritySystem);
@@ -69,13 +70,24 @@ class FloSmartWater {
     if(eventData.device.notifications.criticalCount > 0) {
       this.systemCurrentState = 'alarm';
       this.systemTargetState = 'alarm';
-
-    }
-    else {
+    } else {
       // Current state does not provide correct state, using TargetState
       this.systemCurrentState = eventData.device.systemTargetState;
       this.systemTargetState = eventData.device.systemTargetState;
     }
+    // Treat warning as faults
+    if (eventData.device.notifications.warningCount > 0) {
+      this.systemFault = this.Characteristic.StatusFault.GENERAL_FAULT;
+      // Check option if warning should be esculated to alarms
+      if (this.IsWarningAsCritical)
+      {
+        this.systemCurrentState = 'alarm';
+        this.systemTargetState = 'alarm';
+      }
+    }
+    else
+      this.systemFault = this.Characteristic.StatusFault.NO_FAULT;
+   
 
     // Update valve state
     valveService.updateCharacteristic(this.Characteristic.Active,this.VALVE_ACTIVE_STATE[this.valveStatus]);
@@ -84,6 +96,7 @@ class FloSmartWater {
     // Update mode state
     securitySevice.updateCharacteristic(this.Characteristic.SecuritySystemCurrentState, this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]);
     securitySevice.updateCharacteristic(this.Characteristic.SecuritySystemTargetState, this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState]);
+    securitySevice.updateCharacteristic(this.Characteristic.StatusFault, this.systemFault);
 
   }
 
@@ -104,6 +117,7 @@ class FloSmartWater {
         .setProps({ validValues: this.VALID_TARGET_STATE_VALUES })
         .on('get', async callback => this.getTargetState(callback))
         .on('set', async (state, callback) => this.setTargetState(state, callback));
+    securityService.setCharacteristic(this.Characteristic.StatusFault, this.systemFault);
 
     // create a new Valve service
     var valveService = this.accessory.getService(this.Service.Valve);
@@ -121,6 +135,8 @@ class FloSmartWater {
         .on('get', async callback => this.getValveFault(callback));
 
   }
+
+
 // Handle requests to get the alarm states. Return index of alarm state
 async getCurrentState(callback) {
     var currentValue = this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState];
