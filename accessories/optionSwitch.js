@@ -4,11 +4,11 @@ class FloOptionSwitch {
     constructor(flo, device, log, config, Service, Characteristic, UUIDGen) {
     this.Characteristic = Characteristic;
     this.Service = Service;
-    this.id = device.serialNumber + '.sw';
+    this.serialNumber = device.serialNumber;
     this.log = log;
-    this.deviceid = device.deviceid;
+    this.deviceid = device.deviceid + '.sw';
     this.busy = false;
-    this.uuid = UUIDGen.generate(this.id);
+    this.uuid = UUIDGen.generate(this.deviceid);
     this.flo = flo;
   }
  
@@ -16,7 +16,7 @@ class FloOptionSwitch {
     this.accessory = accessory;
     this.accessory.getService(this.Service.AccessoryInformation)
         .setCharacteristic(this.Characteristic.Manufacturer, 'Moen')
-        .setCharacteristic(this.Characteristic.SerialNumber, this.id);
+        .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber);
 
     var swServiceHealthTest = this.accessory.getService(this.Service.Switch);
     if(swServiceHealthTest == undefined) swServiceHealthTest = this.accessory.addService(this.Service.Switch); 
