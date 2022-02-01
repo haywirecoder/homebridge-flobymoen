@@ -29,23 +29,19 @@
           }
         }
       },
-        "debug": {
-        "title": " Debug",
-        "type": "boolean"
-      },
-      "disableCache": {
+        "disableCache": {
         "title": "Disable Caching of Flo Token",
         "type": "boolean",
         "default": false
       },
-      "showTemperatureAndHumidity": {
+        "showTemperatureAndHumidity": {
         "title": "Show Water Sensor Temperature and Humidity in HomeKit",
         "type": "boolean",
         "default": true,
         "description": "Display Water Sensor(s) area temperature and humidity in HomeKit."
       },
         "enableValveControl": {
-        "title": "Enable valve control in HomeKit",
+        "title": "Enable Valve Control in HomeKit",
         "type": "boolean",
         "default": false,
         "description": "Enable or disable Smart Water Shutoff within HomeKit."
@@ -56,6 +52,12 @@
         "default": false,
         "description": "Display a Health Test switch button to start a manual Health Test in Flo."
       },
+        "treatWarningAsCritical": {
+        "title": "Treat Warning as Critical Events",
+        "type": "boolean",
+        "default": false,
+        "description": "By default <i>Warning</i> are treated as system faults. This option allows <i>Warning</i> to be treated as <i>Critical</i> events thus trigging the alarm."
+      },
         "deviceRefresh": {
         "title": "Device Refresh Interval",
         "type": "integer",
@@ -63,6 +65,13 @@
         "description": "Poll interval to obtain device updates in seconds. <b>Please note:</b> A very low value may cause lockout to your account and/or API errors.",
         "minimum": 15,
         "maximum": 3600
+      },
+        "pingRefresh": {
+        "title": "Periodically Force Refresh",
+        "type": "integer",
+        "description": "Force a cloud refresh of devices at a regular interval. This option should only be used if devices do not seems to updates for multiple hours.",
+        "minimum": 1,
+        "maximum": 24
       },
         "sleepRevertMinutes": {
         "title": "Sleep Time",
@@ -108,17 +117,15 @@
         "sleepRevertMinutes",
         "showTemperatureAndHumidity",
         "showHealthTestSwitch",
-        "enableValveControl"
+        "enableValveControl",
+        "treatWarningAsCritical"
       ]
     },
     {
       "type": "fieldset",
       "expandable": true,
       "title": "Advanced Options",
-      "items": [{
-          "key": "debug",
-          "description": "To see all messages the Homebridge debug (<code>-D</code>) option must also be enabled. <small>See <a target='_blank' href='https://github.com/homebridge/homebridge-raspbian-image/wiki/How-To-Enable-Debug-or-Insecure-Mode'>https://github.com/homebridge/homebridge-raspbian-image/wiki/How-To-Enable-Debug-or-Insecure-Mode</a></small>"
-        },
+      "items": [
         {
           "key": "disableCache",
           "description": "Disabled the storage of Flo access token to local Homebridge server. Refresh token at start-up."
@@ -137,7 +144,8 @@
               ]
             }
           ]
-        }
+        },
+        "pingRefresh"
       ]
     }
   ]

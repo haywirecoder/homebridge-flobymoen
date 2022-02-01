@@ -14,7 +14,6 @@ const FLO_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWeb
 
 const FLO_WATERSENSOR ='puck_oem';
 const FLO_SMARTWATER = 'flo_device_v2';
-const FLO_PINGMIN = 3590000;
 
 class FlobyMoem extends EventEmitter {
     auth_token = {};
@@ -94,13 +93,16 @@ class FlobyMoem extends EventEmitter {
     {
         // Set time to refresh devices
        this.deviceRefreshHandle = setTimeout(() => this.backgroundRefresh(), this.deviceRefreshTime); 
-     
+       if (this.pingRefreshTime > 0) {
+           this.startPingProcess();
+           this.log.info(`Force Flo Cloud synch each ${this.pingRefreshTime/3600000} hour.`);   
+        }  
     };
 
     startPingProcess()
     {
         // Set time to send ping for cloud service to obtain/update data 
-        if (this.pingRefreshTime > FLO_PINGMIN) this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 
+        this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 
      
     };
 
@@ -336,9 +338,9 @@ class FlobyMoem extends EventEmitter {
        
     };
 
-    // *******
+    // *******************************************************
     // Not currently used
-    // *******
+    // *******************************************************
     async getSystemAlerts() {
         
         // Do we have valid sessions? 
@@ -495,10 +497,7 @@ class FlobyMoem extends EventEmitter {
             this.log.error("Flo Error: " + err.message);
             
         }
-
-       this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 
-
+        this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 
     }
 }
-          
 module.exports = FlobyMoem;

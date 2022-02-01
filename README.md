@@ -1,6 +1,5 @@
-[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 [![NPM Version](https://img.shields.io/npm/v/homebridge-flobymoen.svg?style=flat-square)](https://www.npmjs.com/package/homebridge-flobymoen)
-[![npm](https://img.shields.io/npm/dt/homebridge-flobymoen.svg?style=flat-square)](https://www.npmjs.com/package/homebridge-flobymoen)
+
 
 <p align="center">
 <img src="https://github.com/haywirecoder/homebridge-flobymoen/blob/master/images/flo-by-moen-logo.jpg" width="150">
@@ -33,6 +32,9 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 | showHealthTestSwitch | Display Health Check switch in Homekit. The switch will turn on for 4mins while Flo runs the health check.  Default to <i>false</i>, this is an optional value.        
 | disableCache         | Disable the storage of Flo access token. This will cause plug-in to obtain a new access token upon startup. This could result in a minor performance hit at startup. Default to <i>false</i>, this is an optional value. |                                           
 | enableValveControl         | Enable Homekit to control the Smart Water Shutoff valve. By design the valve will display in Homekit (e.g. Home). The status of the valve will be displayed and monitored, however it will not be controllable (e.g. Open or Close) unless this value is set to true. Default to <i>false</i>, this is an optional value.   |
+| treatWarningAsCritical         | By default Flo warnings are treated as alarm faults. Set this value to <i>true</i> to escalated Flo warnings to critical resulting in a Homekit alarm trigger event. |
+| pingRefresh         | Set value to force a refresh of Flo Cloud service. Should be used if device updates are not occuring for an extended period of time.  |
+
 
 
 Example configuration is below.
