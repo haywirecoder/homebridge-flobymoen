@@ -375,6 +375,28 @@ class FlobyMoem extends EventEmitter {
         // }
     };
 
+    async getAlarms() {
+
+        // Do we have valid sessions? 
+        if (!this.isLoggedIn()) {
+            await this.refreshToken();
+        }
+        // Get device
+        var url = FLO_V2_API_BASE + "/alarms";     
+               
+        try {
+
+            var alarm_status = await axios.get(url, this.auth_token.header);
+            this.log.info("Device Updated Data: ", alarm_status.data);
+            
+        }
+        catch(err) {
+            // Something went wrong, display error and return.
+            this.log.error("Flo Getting Alarms Status Error:  " + err.message);
+            return false;
+        };
+    };
+
     async refreshDevice(deviceIndex) {
 
         // Do we have valid sessions? 
@@ -414,9 +436,20 @@ class FlobyMoem extends EventEmitter {
                 case FLO_SMARTWATER:
                     this.flo_devices[deviceIndex].psi = device_info.data.telemetry.current.psi;
                     this.flo_devices[deviceIndex].gpm = device_info.data.telemetry.current.gpm;
-                    this.flo_devices[deviceIndex].systemCurrentState = device_info.data.systemMode.lastKnown;
+                    // New installation may not has lastknown state, set to target state.
+                    if (device_info.data.systemMode.lastKnown) 
+                        this.flo_devices[deviceIndex].systemCurrentState = device_info.data.systemMode.lastKnown;
+                    else
+                        this.flo_devices[deviceIndex].systemCurrentState = device_info.data.systemMode.target;
+
                     this.flo_devices[deviceIndex].systemTargetState = device_info.data.systemMode.target;
-                    this.flo_devices[deviceIndex].valveCurrentState = device_info.data.valve.lastKnown;
+
+                    // New installation may not has lastknown state, set to target state.
+                    if (device_info.data.systemMode.lastKnown) 
+                        this.flo_devices[deviceIndex].valveCurrentState = device_info.data.valve.lastKnown;
+                    else
+                        this.flo_devices[deviceIndex].valveCurrentState = device_info.data.valve.target;
+
                     this.flo_devices[deviceIndex].valveTargetState = device_info.data.valve.target;
                 break;
             } 

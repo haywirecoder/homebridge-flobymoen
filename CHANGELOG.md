@@ -1,6 +1,26 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
+## v1.0.5 (2022-08-22)
+### Changes
+* Dependency updates
+
+### Break fixes
+* Fix incorrect attribute for SystemTargetState characteristics.
+
+
+## v1.0.4 (2021-12-17)
+### Break fixes
+* Homekit device updated frequecy not algin with flo system.
+* package setting resulted in warning messages appearing after node upgrade.
+
+### Enhancements
+* remove -d option, using native homebridge debug flags.
+
+## v1.0.3 (2021-11-02)
+### Break fixes
+* Fix bug which crashes plug-in if proper values are not provided.
+* Fix Plug-in defaulting polling to 60 sec rather than 90 sec.
 
 ## v1.0.2 (2021-10-26)
 ### Break fixes
