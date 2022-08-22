@@ -46,13 +46,15 @@ class FloSmartWater {
       [Characteristic.SecuritySystemTargetState.DISARM]: 'sleep',
       [Characteristic.SecuritySystemTargetState.STAY_ARM]: 'home',
       [Characteristic.SecuritySystemTargetState.AWAY_ARM]: 'away',
-      [Characteristic.SecuritySystemCurrentState.NIGHT_ARM]: 'home' // Night mode should never occur, but as a safety precaution.
     };
+
     this.VALID_CURRENT_STATE_VALUES = [Characteristic.SecuritySystemCurrentState.STAY_ARM, Characteristic.SecuritySystemCurrentState.AWAY_ARM, Characteristic.SecuritySystemCurrentState.DISARMED, Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED];
     this.VALID_TARGET_STATE_VALUES = [Characteristic.SecuritySystemTargetState.STAY_ARM, Characteristic.SecuritySystemTargetState.AWAY_ARM, Characteristic.SecuritySystemTargetState.DISARM];
     this.systemFault = Characteristic.StatusFault.NO_FAULT;
     this.IsWarningAsCritical = config.treatWarningAsCritical ? config.treatWarningAsCritical : false;  
     this.IsValveControlEnabled = config.enableValveControl ? config.enableValveControl : false;  
+    this.systemCurrentState = 'home';
+    this.systemTargetState = 'home';
     this.flo = flo;
     this.flo.on(this.deviceid, this.refreshState.bind(this));
   }
@@ -91,7 +93,9 @@ class FloSmartWater {
     valveService.updateCharacteristic(this.Characteristic.InUse,this.VALVE_INUSE_STATE[this.valveStatus]);
    
     // Update mode state
-    securitySevice.updateCharacteristic(this.Characteristc.SecuritySystemCurrentState, this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]);
+
+        // Update mode state
+    securitySevice.updateCharacteristic(this.Characteristic.SecuritySystemCurrentState, this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]);
     if(this.systemCurrentState != 'alarm') {
       securitySevice.updateCharacteristic(this.Characteristic.SecuritySystemTargetState, this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState]);
       securitySevice.updateCharacteristic(this.Characteristic.StatusFault, this.systemFault);
@@ -149,6 +153,7 @@ async getTargetState(callback) {
 
 // Change smart water shutoff monitoring state.
 async setTargetState(homekitState, callback) {
+   this.log(homekitState)
     this.flo.setSystemMode(this.location, this.TARGET_HOMEKIT_TO_FLO[homekitState],this.systemCurrentState);
     this.systemCurrentState = this.TARGET_HOMEKIT_TO_FLO[homekitState];
     this.systemTargetState = this.TARGET_HOMEKIT_TO_FLO[homekitState];
