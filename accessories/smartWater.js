@@ -40,7 +40,6 @@ class FloSmartWater {
       'sleep': Characteristic.SecuritySystemTargetState.DISARM,
       'home': Characteristic.SecuritySystemTargetState.STAY_ARM,
       'away': Characteristic.SecuritySystemTargetState.AWAY_ARM,
-      'alarm': Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED
     };
 
     this.TARGET_HOMEKIT_TO_FLO = {
@@ -69,10 +68,9 @@ class FloSmartWater {
     const valveService = this.accessory.getService(this.Service.Valve);
     if(eventData.device.notifications.criticalCount > 0) {
       this.systemCurrentState = 'alarm';
-      this.systemTargetState = 'alarm';
     } else {
       // Current state does not provide correct state, using TargetState
-      this.systemCurrentState = eventData.device.systemTargetState;
+      this.systemCurrentState = eventData.device.systemCurrentState;
       this.systemTargetState = eventData.device.systemTargetState;
     }
     // Treat warning as faults
@@ -82,7 +80,6 @@ class FloSmartWater {
       if (this.IsWarningAsCritical)
       {
         this.systemCurrentState = 'alarm';
-        this.systemTargetState = 'alarm';
       }
     }
     else
@@ -94,9 +91,11 @@ class FloSmartWater {
     valveService.updateCharacteristic(this.Characteristic.InUse,this.VALVE_INUSE_STATE[this.valveStatus]);
    
     // Update mode state
-    securitySevice.updateCharacteristic(this.Characteristic.SecuritySystemCurrentState, this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]);
-    securitySevice.updateCharacteristic(this.Characteristic.SecuritySystemTargetState, this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState]);
-    securitySevice.updateCharacteristic(this.Characteristic.StatusFault, this.systemFault);
+    securitySevice.updateCharacteristic(this.Characteristc.SecuritySystemCurrentState, this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]);
+    if(this.systemCurrentState != 'alarm') {
+      securitySevice.updateCharacteristic(this.Characteristic.SecuritySystemTargetState, this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState]);
+      securitySevice.updateCharacteristic(this.Characteristic.StatusFault, this.systemFault);
+    }
 
   }
 
@@ -108,8 +107,8 @@ class FloSmartWater {
         .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber);
 
     var securityService = this.accessory.getService(this.Service.SecuritySystem);
-    if(securityService == undefined) securityService = this.accessory.addService(this.Service.SecuritySystem,'System Mode');
-    securityService.setCharacteristic(this.Characteristic.Name, 'System Mode'); 
+    if(securityService == undefined) securityService = this.accessory.addService(this.Service.SecuritySystem,'Water System');
+    securityService.setCharacteristic(this.Characteristic.Name, 'Water System'); 
     securityService.getCharacteristic(this.Characteristic.SecuritySystemCurrentState)
         .setProps({ validValues: this.VALID_CURRENT_STATE_VALUES })
         .on('get', async callback => this.getCurrentState(callback));
@@ -121,9 +120,9 @@ class FloSmartWater {
 
     // create a new Valve service
     var valveService = this.accessory.getService(this.Service.Valve);
-    if(valveService == undefined) valveService = this.accessory.addService(this.Service.Valve,'Valve'); 
+    if(valveService == undefined) valveService = this.accessory.addService(this.Service.Valve,'Flo Valve'); 
     // create handlers for required characteristics
-    valveService.setCharacteristic(this.Characteristic.Name, 'Valve'); 
+    valveService.setCharacteristic(this.Characteristic.Name, 'Flo Valve'); 
     valveService.getCharacteristic(this.Characteristic.Active)
         .on('get', async callback => this.getValveActive(callback))
         .on('set', async (state, callback) => this.setValveActive(state, callback));
