@@ -1,7 +1,7 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
-## v1.0.5 (2022-08-22)
+## v1.0.6 (2022-08-22)
 ### Break fixes
 * Fix incorrect attribute for SystemCurrentState characteristics.
 
