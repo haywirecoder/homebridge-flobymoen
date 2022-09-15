@@ -1,6 +1,10 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
+# v1.0.7 (2022-09-16)
+### Break fixes
+* Spelling and Typo fix.
+
 ## v1.0.6 (2022-08-22)
 ### Break fixes
 * Fix incorrect attribute for SystemCurrentState characteristics.
@@ -15,7 +19,7 @@ All notable changes to this project will be documented in this file. This projec
 
 ## v1.0.4 (2021-12-17)
 ### Break fixes
-* Homekit device updated frequecy not algin with flo system.
+* Homekit device updated frequency not algin with flo system.
 * package setting resulted in warning messages appearing after node upgrade.
 
 ### Enhancements
@@ -52,8 +56,8 @@ All notable changes to this project will be documented in this file. This projec
 
 ### Changes
 * Add support to turn on and off Smart shutoff valve control.
-* Add option to hide the water sensor temperature and humity information from Homekit. Thus, reducing the number of controls within Homekit.
-* Add ablity to exclude Flo devices from Homekit. 
+* Add option to hide the water sensor temperature and humidity information from Homekit. Thus, reducing the number of controls within Homekit.
+* Add ability to exclude Flo devices from Homekit. 
 
 ## v0.0.2 (2021-30-08)
 ### Initial release for testing and validation.

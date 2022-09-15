@@ -31,16 +31,16 @@ class FloByMoenPlatform {
 
     // Check if authentication information has been provided.
     try{
-        if ((this.config.auth.username == "") || (this.config.auth.password == ""))
+        if ((this.config.auth.username == "") || (this.config.auth.password == "") || (!this.config.auth.password) || (!this.config.auth.username))
         {
           this.log.error('Plug-in configuration error: Flo authentication information not provided.');
-          // terminate plug-in initization
+          // terminate plug-in initialization
           return;
         }
       }
     catch(err) {
       this.log.error('Plug-in configuration error: Flo authentication information not provided.');
-       // terminate plug-in initization
+       // terminate plug-in initialization
       return;
     }
 
@@ -54,8 +54,8 @@ class FloByMoenPlatform {
     this.initialLoad = this.flo.init().then ( () => {
       this.log.debug('Initialization Successful.');
     }).catch(err => {
-              this.log.error('Flo API Initization Failure:', err);
-               // terminate plug-in initization
+              this.log.error('Flo API initialization Failure:', err);
+               // terminate plug-in initialization
               return;
     });
 
@@ -69,16 +69,15 @@ class FloByMoenPlatform {
       this.initialLoad.then(() => {
           // Discover devices
           if (this.flo.isLoggedIn()){
-            this.log.info("Initiaizing Flo devices...")
+            this.log.info("Initializing Flo devices...")
             this.flo.discoverDevices().then (() => {
-            // Once devices are discovered update Homekit assessories
+            // Once devices are discovered update Homekit accessories
             this.refreshAccessories();
-            this.log.info(`Flo device updates complete, background polling process started.\nDevice will be polled each ${Math.floor((this.refreshInterval / 60))} min(s) ${Math.floor((this.refreshInterval % 60))} second(s).`);     
             })
           }
           else
-            // User login wasn't success graceful end initization. 
-            this.log.error("Plug-in configuration error: Flo authentication error, please review your authenication information.'")
+            // User login wasn't success graceful end initialization. 
+            this.log.error("Plug-in configuration error: Flo authentication error, please review your authentication information.'")
         })
     });
   }
@@ -89,7 +88,7 @@ class FloByMoenPlatform {
   // Process each flo devices and create accessories within the platform. smart water value and water sensor classes 
   // will handle the creation and setting callback for each device types.
   var IsHealthSwitchEnabled = this.config.showHealthTestSwitch ? this.config.showHealthTestSwitch : false;
-
+  if (this.this.flo.flo_devices.length <=0 ) return;
   for (var i = 0; i < this.flo.flo_devices.length; i++) {
     let currentDevice = this.flo.flo_devices[i];
     switch (currentDevice.type) {
@@ -144,6 +143,9 @@ class FloByMoenPlatform {
     }
     // Clean accessories with no association with Flo devices.
     this.orphanAccessory();
+  
+    this.log.info(`Flo device updates complete, background polling process started.\nDevice will be polled each ${Math.floor((this.refreshInterval / 60))} min(s) ${Math.floor((this.refreshInterval % 60))} second(s).`);     
+   
     // Start background process to poll devices.
     this.flo.startPollingProcess();
   }
@@ -183,7 +185,7 @@ class FloByMoenPlatform {
       // determine if accessory is currently a device in flo system, thus should remain
       foundAccessory = this.flo.flo_devices.find(device => UUIDGen.generate(device.deviceid.toString()) === accessory.UUID)
       if (!foundAccessory) {
-        // determine if an optional compoment, thus should remain
+        // determine if an optional components, thus should remain
         foundAccessory = this.optionalAccessories.find(optionalAccessory => optionalAccessory.uuid === accessory.UUID);
         if (!foundAccessory) {
             this.removeAccessory(accessory,true);

@@ -15,7 +15,7 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 
 ## Limitation:
 * This module works with Smart Water Shutoff and Water sensors only. It does not support the recently release Flo Smart Water Faucets.
-* This module will poll for the status of the various compoments based frequency provided in configuration file. No realtime notification is provided.
+* This module will poll for the status of the various components based frequency provided in configuration file. No realtime notification is provided.
 
 ## Know Issues:
 * At times the plug-in reports a 502 error. This is a communication error with the Flo server, an occasional error will not effect operations of the plug-in.
@@ -33,7 +33,7 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 | disableCache         | Disable the storage of Flo access token. This will cause plug-in to obtain a new access token upon startup. This could result in a minor performance hit at startup. Default to <i>false</i>, this is an optional value. |                                           
 | enableValveControl         | Enable Homekit to control the Smart Water Shutoff valve. By design the valve will display in Homekit (e.g. Home). The status of the valve will be displayed and monitored, however it will not be controllable (e.g. Open or Close) unless this value is set to true. Default to <i>false</i>, this is an optional value.   |
 | treatWarningAsCritical         | By default Flo warnings are treated as alarm faults. Set this value to <i>true</i> to escalated Flo warnings to critical resulting in a Homekit alarm trigger event. |
-| pingRefresh         | Set value to force a refresh of Flo Cloud service. Should be used if device updates are not occuring for an extended period of time.  |
+| pingRefresh         | Set value to force a refresh of Flo Cloud service. Should be used if device updates are not occurring for an extended period of time.  |
 
 
 
