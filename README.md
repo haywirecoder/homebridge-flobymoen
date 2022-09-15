@@ -34,6 +34,8 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 | enableValveControl         | Enable Homekit to control the Smart Water Shutoff valve. By design the valve will display in Homekit (e.g. Home). The status of the valve will be displayed and monitored, however it will not be controllable (e.g. Open or Close) unless this value is set to true. Default to <i>false</i>, this is an optional value.   |
 | treatWarningAsCritical         | By default Flo warnings are treated as alarm faults. Set this value to <i>true</i> to escalated Flo warnings to critical resulting in a Homekit alarm trigger event. |
 | pingRefresh         | Set value to force a refresh of Flo Cloud service. Should be used if device updates are not occurring for an extended period of time.  |
+| excludedDevices         | Using the device serial number to suppress from HomeKit. This is an optional value. | |
+
 
 
 
