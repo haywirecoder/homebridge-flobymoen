@@ -1,7 +1,10 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
-# v1.0.7 (2022-09-16)
+# v1.0.7 (2023-02-10)
+### Enhancements
+* Generate general fault in homekit when battery device hasn't communicated with the service for pre-determine time.
+
 ### Break fixes
 * Spelling and Typo fix.
 

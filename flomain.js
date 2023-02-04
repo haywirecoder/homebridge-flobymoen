@@ -38,6 +38,7 @@ class FlobyMoem extends EventEmitter {
         this.deviceRefreshTime = config.deviceRefresh * 1000 || 90000;
         this.pingRefreshTime = config.pingRefresh * 3600000 || 0;
         this.sleepRevertMinutes = config.sleepRevertMinutes || 120;
+        this.offlineTimeLimit = config.offlineTimeLimit || 4 ;
         this.excludedDevices = config.excludedDevices || [];
         this.auth_token.username = config.auth.username;
         this.auth_token.password = config.auth.password;
@@ -47,7 +48,7 @@ class FlobyMoem extends EventEmitter {
 
     async init() {
 
-        // Retrieve login storage login inoformation
+        // Retrieve login storage login information
         if(this.persistPath != undefined)
         {
             // Initializes the storage
@@ -206,11 +207,14 @@ class FlobyMoem extends EventEmitter {
                                     device.location = device_info.data.location.id;
                                     device.deviceid = device_info.data.id;
                                     device.notifications = device_info.data.notifications.pending;
+                                    device.warningCount = device_info.data.notifications.warningCount || 0;
+                                    device.criticalCount = device_info.data.notifications.criticalCount || 0;
+                                    device.offline = 0;
                                     device.lastUpdate = new Date(device_info.data.lastHeardFromTime);
                                     // determine type of device and set proper data elements
                                     switch (device_info.data.deviceType) {
                                         case FLO_WATERSENSOR:
-                                            // homekit expect temperatures in celuis and allow homekit to perform conversion if needed.
+                                            // homekit expect temperatures in celsius and allow homekit to perform conversion if needed.
                                             device.temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
                                             device.humidity = device_info.data.telemetry.current.humidity;
                                             // Return whether water is detected, for leak detectors.
@@ -228,7 +232,7 @@ class FlobyMoem extends EventEmitter {
                                             break;
                                     } 
                                     // Store device in array, the array will store all of users device in all location.
-                                    this.log.debug("Adding Device: ", device.deviceid);
+                                    this.log.debug("Adding Device: ", device);
                                     this.flo_devices.push(device);
                                 }
                                 else
@@ -404,7 +408,8 @@ class FlobyMoem extends EventEmitter {
             await this.refreshToken();
         }
         // Get device
-        var url = FLO_V2_API_BASE + "/devices/" + this.flo_devices[deviceIndex].deviceid;     
+        var url = FLO_V2_API_BASE + "/devices/" + this.flo_devices[deviceIndex].deviceid; 
+        
                
         try {
 
@@ -413,14 +418,31 @@ class FlobyMoem extends EventEmitter {
             // Has the object been updated? If the device has not been heard from, no change is needed
             let deviceUpdateTime = new Date(device_info.data.lastHeardFromTime);
             if (deviceUpdateTime.getTime() == this.flo_devices[deviceIndex].lastUpdate.getTime()) {
+                
                 this.log.debug(this.flo_devices[deviceIndex].name + " has no updates.");
+                // Check if device could be offline
+                var nowDate = new Date();
+                // calculate number of hours since last check-in
+                var delta = Math.floor(Math.floor((nowDate - deviceUpdateTime) / 1000)/3600);
+                if ((delta >= this.offlineTimeLimit) && (this.flo_devices[deviceIndex].offline == 0)) {
+                    // limit reach set provide warning 
+                    this.flo_devices[deviceIndex].offline = 1;
+                     // send event to homekit accessory
+                    this.emit(this.flo_devices[deviceIndex].deviceid, {
+                        device: this.flo_devices[deviceIndex]
+                    });
+                    this.log.warn(`Device is marked offline: ${this.flo_devices[deviceIndex].name} no updates for hour(s) ${delta}`);
+                }
+                this.log.debug("Hour(s) since last report: " + delta);
                 return true;
             }
             // Update key information about device
-           this.log.debug("Device Updated Data: ", device_info.data);
+            this.log.debug("Device Updated Data: ", device_info.data);
 
             this.flo_devices[deviceIndex].lastUpdate = new Date(device_info.data.lastHeardFromTime);
             this.flo_devices[deviceIndex].notifications = device_info.data.notifications.pending;
+            if(this.flo_devices[deviceIndex].offline == 1) this.log.info(`Device is back online: ${this.flo_devices[deviceIndex].name}`);
+            this.flo_devices[deviceIndex].offline = 0;
         
             // determine type of device and update the proper data elements
             switch (this.flo_devices[deviceIndex].type) {
@@ -454,7 +476,7 @@ class FlobyMoem extends EventEmitter {
                 break;
             } 
            
-            // change were detected updata device data elements and trigger updata.
+            // change were detected update device data elements and trigger update.
             this.emit(this.flo_devices[deviceIndex].deviceid, {
                 device: this.flo_devices[deviceIndex]
             });
@@ -463,7 +485,8 @@ class FlobyMoem extends EventEmitter {
         } 
         catch(err) {
                 // Something went wrong, display error and return.
-                this.log.error("Flo Device Refresh Error:  " + err.message);
+                
+                this.log.error("Flo Device Refresh Error:  " + err.message + " " + this.flo_devices[deviceIndex].name);
                 return false;
         };
     };
@@ -484,10 +507,10 @@ class FlobyMoem extends EventEmitter {
         }
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
-            // Token is expired or not login, start sessior with meetflo portal.
+            // Token is expired or not login, start session with meetflo portal.
             await this.refreshToken();
         }
-        // Updata all data elements
+        // Update all data elements
         for (var i = 0; i < this.flo_devices.length; i++) {
             await this.refreshDevice(i);
         }

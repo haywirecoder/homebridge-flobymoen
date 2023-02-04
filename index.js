@@ -88,7 +88,7 @@ class FloByMoenPlatform {
   // Process each flo devices and create accessories within the platform. smart water value and water sensor classes 
   // will handle the creation and setting callback for each device types.
   var IsHealthSwitchEnabled = this.config.showHealthTestSwitch ? this.config.showHealthTestSwitch : false;
-  if (this.this.flo.flo_devices.length <=0 ) return;
+  if (this.flo.flo_devices.length <=0 ) return;
   for (var i = 0; i < this.flo.flo_devices.length; i++) {
     let currentDevice = this.flo.flo_devices[i];
     switch (currentDevice.type) {

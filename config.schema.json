@@ -20,12 +20,18 @@
           "username": {
             "title": "Flo Username",
             "type": "string",
-            "required": true
+            "required": true,
+            "x-schema-form": {
+              "type": "username"
+            }
           },
           "password": {
             "title": "Flo Password",
             "type": "string",
-            "required": true
+            "required": true,
+            "x-schema-form": {
+              "type": "password"
+            }
           }
         }
       },
@@ -59,7 +65,7 @@
         "description": "By default <i>Warning</i> are treated as system faults. This option allows <i>Warning</i> to be treated as <i>Critical</i> events thus trigging the alarm."
       },
         "deviceRefresh": {
-        "title": "Device Refresh Interval",
+        "title": "Device Refresh Interval (seconds)",
         "type": "integer",
         "default": 90,
         "description": "Poll interval to obtain device updates in seconds. <b>Please note:</b> A very low value may cause lockout to your account and/or API errors.",
@@ -71,6 +77,14 @@
         "type": "integer",
         "description": "Force a cloud refresh of devices at a regular interval. This option should only be used if devices do not seems to updates for multiple hours.",
         "minimum": 1,
+        "maximum": 24
+      },
+      "offlineTimeLimit": {
+        "title": "Offline Time Limit (hours)",
+        "type": "integer",
+        "description": "Number of house with no refresh before considering device offline.",
+        "default": 4,
+        "minimum": 2,
         "maximum": 24
       },
         "sleepRevertMinutes": {
@@ -118,7 +132,8 @@
         "showTemperatureAndHumidity",
         "showHealthTestSwitch",
         "enableValveControl",
-        "treatWarningAsCritical"
+        "treatWarningAsCritical",
+        "offlineTimeLimit"
       ]
     },
     {
