@@ -9,6 +9,7 @@ class FloWaterSensor {
     this.name = device.name;
     this.currentTemperature = device.temperature || -180;
     this.currentHumidity = device.humidity || 0.0;
+    this.systemFault =  device.warningCount + device.criticalCount || 0;
     this.leakDected = false;
     this.batteryLevel = device.batterylevel || 0;
     this.IsTemperatureAndHumidity = config.showTemperatureAndHumidity ? config.showTemperatureAndHumidity : true;
@@ -35,6 +36,10 @@ class FloWaterSensor {
      else  { 
       this.leakDected = false;
       leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
+      this.systemFault =  eventData.device.warningCount + eventData.device.criticalCount + eventData.offline || 0;
+      // if no leak is detected and we have warnings critical errors set general fault.
+      if (this.systemFault > 0) leakService.updateCharacteristic(this.Characteristic.StatusFault, this.Characteristic.StatusFault.GENERAL_FAULT);
+      else leakService.updateCharacteristic(this.Characteristic.StatusFault, this.Characteristic.StatusFault.NO_FAULT);
     }
   }
 
