@@ -118,6 +118,13 @@
           "type": "string",
           "description": "Serial Number"
         }
+      },
+      "retryErrorDisplay": {
+        "title": "Maximum number of refresh error before alerting in log.",
+        "type": "integer",
+        "default": 3,
+        "description": "At times the plug-in reports a 502 error. This is a communication error with the Flo server. An occasional error will not effect operations but can fill up log. This value define number of consecutive failure before logging.",
+        "minimum": 3
       }
     }
   },
@@ -160,7 +167,8 @@
             }
           ]
         },
-        "pingRefresh"
+        "pingRefresh",
+        "retryErrorDisplay"
       ]
     }
   ]

@@ -6,12 +6,14 @@ const storage = require('node-persist');
 // URL constant for retrieving data
 const FLO_V1_API_BASE = 'https://api.meetflo.com/api/v1';
 const FLO_V2_API_BASE = 'https://api-gw.meetflo.com/api/v2';
+const HEADER_ORIGIN = "https://user.meetflo.com";
+const HEADER_REFERER = "https://user.meetflo.com/home";
 const FLO_AUTH_URL       = FLO_V1_API_BASE + '/users/auth';
 const FLO_USERTOKENS_URL = FLO_V1_API_BASE + '/usertokens/me';
 const FLO_PRESENCE_HEARTBEAT = FLO_V2_API_BASE + '/presence/me';
 // Generic header for Safari macOS to interact with Flo api
-const FLO_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15';
-
+const FLO_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36';
+const TIMEOUT = 120000;
 const FLO_WATERSENSOR ='puck_oem';
 const FLO_SMARTWATER = 'flo_device_v2';
 
@@ -27,6 +29,8 @@ class FlobyMoem extends EventEmitter {
     sleepRevertMinutes;
     log;
     persistPath;
+    maxErrorCount;
+    
 
     constructor(log, config, persistPath) {
         super();
@@ -42,6 +46,7 @@ class FlobyMoem extends EventEmitter {
         this.excludedDevices = config.excludedDevices || [];
         this.auth_token.username = config.auth.username;
         this.auth_token.password = config.auth.password;
+        this.maxErrorCount = config.retryErrorDisplay || 3;
         this.isBusy = false;
         
     };
@@ -174,11 +179,22 @@ class FlobyMoem extends EventEmitter {
             await this.refreshToken();
         }
         // Create path for locations listing
-        var url = FLO_V2_API_BASE + "/users/" + this.auth_token.user_id + "?expand=locations";
+        var url = FLO_V2_API_BASE + "/users/" + this.auth_token.user_id + "?expand=locations"; 
+
+        var getHeader = { 
+            'Origin': HEADER_ORIGIN,
+            'Referer': HEADER_REFERER,
+            'timeout': TIMEOUT
+        }
+
+        var discoverHeader = {
+            ...this.auth_token.header,
+            ...getHeader
+        }
         
         try {
             // Get devices at location 
-            const loc_response = await axios.get(url, this.auth_token.header);
+            const loc_response = await axios.get(url, discoverHeader);
             var locations_info = loc_response; 
             // Get each device at each location
             for (var i = 0; i < locations_info.data.locations.length; i++) {
@@ -187,9 +203,8 @@ class FlobyMoem extends EventEmitter {
                     // for each location get devices
                     for (var z = 0; z < locations_info.data.locations[i].devices.length; z++) {
                         url = FLO_V2_API_BASE + "/devices/" + locations_info.data.locations[i].devices[z].id;
-                        
                         try {
-                            const device_response = await axios.get(url, this.auth_token.header);
+                            const device_response = await axios.get(url, discoverHeader);
                             var device_info = device_response;
                             this.log.debug("Device Raw Data: ", device_info.data);
                             if (this.excludedDevices.includes(device_info.data.serialNumber)) {
@@ -209,7 +224,10 @@ class FlobyMoem extends EventEmitter {
                                     device.notifications = device_info.data.notifications.pending;
                                     device.warningCount = device_info.data.notifications.warningCount || 0;
                                     device.criticalCount = device_info.data.notifications.criticalCount || 0;
+                                    device.version = device_info.data.fwVersion;
+                                    device.isConnected = device_info.data.isConnected;
                                     device.offline = 0;
+                                    device.errorCount = 0;
                                     device.lastUpdate = new Date(device_info.data.lastHeardFromTime);
                                     // determine type of device and set proper data elements
                                     switch (device_info.data.deviceType) {
@@ -229,7 +247,12 @@ class FlobyMoem extends EventEmitter {
                                             device.systemTargetState = device_info.data.systemMode.target;
                                             device.valveCurrentState = device_info.data.valve.lastKnown;
                                             device.valveTargetState = device_info.data.valve.target || device.valveCurrentState;
+                                            this.getConsumption(device);
                                             break;
+                                        default:
+                                            this.log("Unsupported Device found.");
+                                            this.log(device_info.data);
+
                                     } 
                                     // Store device in array, the array will store all of users device in all location.
                                     this.log.debug("Adding Device: ", device);
@@ -409,17 +432,33 @@ class FlobyMoem extends EventEmitter {
         }
         // Get device
         var url = FLO_V2_API_BASE + "/devices/" + this.flo_devices[deviceIndex].deviceid; 
-        
+        var getHeader = { 
+            'Origin': HEADER_ORIGIN,
+            'Referer': HEADER_REFERER,
+            'timeout': TIMEOUT
+        }
+
+        var refreshHeader = {
+            ...this.auth_token.header,
+            ...getHeader
+        }
                
         try {
 
-            var device_info = await axios.get(url, this.auth_token.header);
+            var device_info = await axios.get(url, refreshHeader);
             
             // Has the object been updated? If the device has not been heard from, no change is needed
+            this.log.debug("Getting Update time ", this.flo_devices[deviceIndex].name);
+            
             let deviceUpdateTime = new Date(device_info.data.lastHeardFromTime);
+
+            this.log.debug("Comparing update time for ", this.flo_devices[deviceIndex].name);
+            
             if (deviceUpdateTime.getTime() == this.flo_devices[deviceIndex].lastUpdate.getTime()) {
                 
-                this.log.debug(this.flo_devices[deviceIndex].name + " has no updates.");
+                this.log.debug(this.flo_devices[deviceIndex].name, " has no updates.");
+                // polling was successful.
+                this.flo_devices[deviceIndex].errorCount = 0;
                 // Check if device could be offline
                 var nowDate = new Date();
                 // calculate number of hours since last check-in
@@ -431,7 +470,7 @@ class FlobyMoem extends EventEmitter {
                     this.emit(this.flo_devices[deviceIndex].deviceid, {
                         device: this.flo_devices[deviceIndex]
                     });
-                    this.log.warn(`Device is marked offline: ${this.flo_devices[deviceIndex].name} no updates for hour(s) ${delta}`);
+                    this.log.warn(`Device is marked offline: ${this.flo_devices[deviceIndex].name} has received no updates for ${delta} hours`);
                 }
                 this.log.debug("Hour(s) since last report: " + delta);
                 return true;
@@ -443,7 +482,8 @@ class FlobyMoem extends EventEmitter {
             this.flo_devices[deviceIndex].notifications = device_info.data.notifications.pending;
             if(this.flo_devices[deviceIndex].offline == 1) this.log.info(`Device is back online: ${this.flo_devices[deviceIndex].name}`);
             this.flo_devices[deviceIndex].offline = 0;
-        
+            this.flo_devices[deviceIndex].errorCount = 0;
+    
             // determine type of device and update the proper data elements
             switch (this.flo_devices[deviceIndex].type) {
                 case FLO_WATERSENSOR:
@@ -477,6 +517,7 @@ class FlobyMoem extends EventEmitter {
             } 
            
             // change were detected update device data elements and trigger update.
+            this.log.debug("Updating homekit for  ", this.flo_devices[deviceIndex].name);
             this.emit(this.flo_devices[deviceIndex].deviceid, {
                 device: this.flo_devices[deviceIndex]
             });
@@ -484,9 +525,19 @@ class FlobyMoem extends EventEmitter {
                             
         } 
         catch(err) {
-                // Something went wrong, display error and return.
-                
-                this.log.error("Flo Device Refresh Error:  " + err.message + " " + this.flo_devices[deviceIndex].name);
+                // At times the plug-in reports a 502 error. This is a communication error with the Flo server,
+                // an occasional error will not effect operations, surpress unless it occuring frequenctly.
+                if(err.response.status == 502)
+                {
+                    this.flo_devices[deviceIndex].errorCount += 1;
+                    if (this.flo_devices[deviceIndex].errorCount > this.maxErrorCount)
+                    {
+                        this.log.warn(`Flo Device ${this.flo_devices[deviceIndex].name} failed to update ${this.flo_devices[deviceIndex].errorCount} times.`);
+                    }
+                    this.log.debug("Max failed attemp not reach: ", this.flo_devices[deviceIndex].name, "number of errors: ", this.flo_devices[deviceIndex].errorCount );
+                }
+                else
+                    this.log.error("Flo Device Refresh Error:  " + err.message + " " + this.flo_devices[deviceIndex].name);
                 return false;
         };
     };
@@ -521,7 +572,21 @@ class FlobyMoem extends EventEmitter {
 
     };
    
+    async getConsumption(device) {
+        var location_id = device.location;
+        var startDate = new Date();
+        var endDate = new Date();
+        endDate.setHours(startDate.getHours() + 24);
 
+        var startDateFormat = startDate.getFullYear() + "-" + String(startDate.getMonth() + 1).padStart(2, '0') + "-" + String(startDate.getDate()).padStart(2, '0');
+        var endDateFormat = endDate.getFullYear() + "-" + String(endDate.getMonth() + 1).padStart(2, '0') + "-" + String(endDate.getDate()).padStart(2, '0');
+        var url = "https://api-gw.meetflo.com/api/v2/water/consumption?startDate=" + startDateFormat + "&endDate=" + endDateFormat + "&locationId=" + location_id + "&interval=1h";
+    
+        var response = await axios.get(url, this.auth_token.header);
+        var data = response.data
+        device.sumTotalGallonsConsumed = data.aggregations.sumTotalGallonsConsumed;
+        
+    }
     // Send a presence ping to Flo, to force device updates.
     async generatePing()
     {

@@ -17,9 +17,6 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 * This module works with Smart Water Shutoff and Water sensors only. It does not support the recently release Flo Smart Water Faucets.
 * This module will poll for the status of the various components based frequency provided in configuration file. No realtime notification is provided.
 
-## Know Issues:
-* At times the plug-in reports a 502 error. This is a communication error with the Flo server, an occasional error will not effect operations of the plug-in.
-
 ## Configuration options
 
 | Attributes        | Description                                                                                                              |
