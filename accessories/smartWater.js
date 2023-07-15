@@ -10,8 +10,10 @@ class FloSmartWater {
     this.Service = Service;
     this.log = log;
     this.name = device.name;
+    this.model = device.deviceModel;
     this.serialNumber = device.serialNumber;
     this.location = device.location;
+    this.version = device.version;
     this.valveStatus = device.valveTargetState;
     this.systemCurrentState = device.systemTargetState;
     this.systemTargetState = device.systemTargetState;
@@ -68,6 +70,7 @@ class FloSmartWater {
     // get security system
     const securityService = this.accessory.getService(this.Service.SecuritySystem);
     const valveService = this.accessory.getService(this.Service.Valve);
+
     if(eventData.device.notifications.criticalCount > 0) {
       this.systemCurrentState = 'alarm';
     } else {
@@ -75,19 +78,23 @@ class FloSmartWater {
       this.systemCurrentState = eventData.device.systemCurrentState;
       this.systemTargetState = eventData.device.systemTargetState;
     }
-    // Treat warning as faults
-    if ((eventData.device.notifications.warningCount > 0) || (eventData.device.warningCount > 0) || (eventData.offline > 0 )) {
-      this.systemFault = this.Characteristic.StatusFault.GENERAL_FAULT;
-      // Check option if warning should be escalated to alarms
-      if (this.IsWarningAsCritical)
-      {
-        this.systemCurrentState = 'alarm';
-      }
+
+    // Treat warning as critical
+    if ((eventData.device.notifications.warningCount > 0) || (eventData.device.warningCount > 0)) {
+        // Check option if warning should be escalated to alarms
+        if (this.IsWarningAsCritical)
+        {
+          this.systemCurrentState = 'alarm';
+        }
     }
+
+    // Device is offline.
+    if ((eventData.device.offline > 0 ) || (eventData.device.isConnected == false )) 
+      this.systemFault = this.Characteristic.StatusFault.GENERAL_FAULT;
     else
       this.systemFault = this.Characteristic.StatusFault.NO_FAULT;
-   
 
+  
     // Update valve state
     valveService.updateCharacteristic(this.Characteristic.Active,this.VALVE_ACTIVE_STATE[this.valveStatus]);
     valveService.updateCharacteristic(this.Characteristic.InUse,this.VALVE_INUSE_STATE[this.valveStatus]);
@@ -105,8 +112,9 @@ class FloSmartWater {
     this.accessory = accessory;
     this.accessory.getService(this.Service.AccessoryInformation)
         .setCharacteristic(this.Characteristic.Manufacturer, 'Moen')
-        .setCharacteristic(this.Characteristic.Model, 'Smart Water Shutoff')
-        .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber);
+        .setCharacteristic(this.Characteristic.Model, 'SW Shutoff ' + this.model)
+        .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber)
+        .setCharacteristic(this.Characteristic.FirmwareRevision, this.version);
 
     var securityService = this.accessory.getService(this.Service.SecuritySystem);
     if(securityService == undefined) securityService = this.accessory.addService(this.Service.SecuritySystem,'Water System');
@@ -118,7 +126,7 @@ class FloSmartWater {
         .setProps({ validValues: this.VALID_TARGET_STATE_VALUES })
         .on('get', async callback => this.getTargetState(callback))
         .on('set', async (state, callback) => this.setTargetState(state, callback));
-    securityService.setCharacteristic(this.Characteristic.StatusFault, this.systemFault);
+    securityService.setCharacteristic(this.Characteristic.StatusFault, this.Characteristic.StatusFault.NO_FAULT);
 
     // create a new Valve service
     var valveService = this.accessory.getService(this.Service.Valve);

@@ -5,8 +5,10 @@ class FloWaterSensor {
     this.Characteristic = Characteristic;
     this.Service = Service;
     this.serialNumber = device.serialNumber;
+    this.model = device.deviceModel;
     this.log = log;
     this.name = device.name;
+    this.version = device.version;
     this.currentTemperature = device.temperature || -180;
     this.currentHumidity = device.humidity || 0.0;
     this.systemFault =  device.warningCount + device.criticalCount || 0;
@@ -36,7 +38,7 @@ class FloWaterSensor {
      else  { 
       this.leakDected = false;
       leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
-      this.systemFault =  eventData.device.warningCount + eventData.device.criticalCount + eventData.offline || 0;
+      this.systemFault =  eventData.device.offline || 0;
       // if no leak is detected and we have warnings critical errors set general fault.
       if (this.systemFault > 0) leakService.updateCharacteristic(this.Characteristic.StatusFault, this.Characteristic.StatusFault.GENERAL_FAULT);
       else leakService.updateCharacteristic(this.Characteristic.StatusFault, this.Characteristic.StatusFault.NO_FAULT);
@@ -47,8 +49,9 @@ class FloWaterSensor {
     this.accessory = accessory;
     this.accessory.getService(this.Service.AccessoryInformation)
         .setCharacteristic(this.Characteristic.Manufacturer, 'Moen')
-        .setCharacteristic(this.Characteristic.Model, 'Water Sensor')
-        .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber);
+        .setCharacteristic(this.Characteristic.Model, 'Water Sesnor ' + this.model)
+        .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber)
+        .setCharacteristic(this.Characteristic.FirmwareRevision, this.version);
 
     // Add leak sensor
     var leakService = this.accessory.getService(this.Service.LeakSensor);
