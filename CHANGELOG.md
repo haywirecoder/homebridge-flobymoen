@@ -2,11 +2,10 @@ All notable changes to this project will be documented in this file. This projec
 # Change Log
  v1.0.9 (2023-07-28)
 ### Enhancements
-* Create a tamper event when smart valve has an issued.
+* Generate a tamper event when the smart valve has a problem.
 * General enhancement for valve functionality and state information.
 
 # v1.0.8 (2023-07-15)
-
 ### Enhancements
 * Create option when to log 502 errors.
 
