@@ -11,7 +11,6 @@ class FloWaterSensor {
     this.version = device.version;
     this.currentTemperature = device.temperature || -180;
     this.currentHumidity = device.humidity || 0.0;
-    this.systemFault =  device.warningCount + device.criticalCount || 0;
     this.leakDected = false;
     this.batteryLevel = device.batterylevel || 0;
     this.IsTemperatureAndHumidity = config.showTemperatureAndHumidity ? config.showTemperatureAndHumidity : true;
@@ -19,6 +18,8 @@ class FloWaterSensor {
     this.deviceid = device.deviceid.toString();
     this.uuid = UUIDGen.generate(this.deviceid);
     this.flo.on(this.deviceid, this.refreshState.bind(this));
+    // Set tampered when device is offline
+    this.systemTampered = Characteristic.StatusTampered.NOT_TAMPERED;
   }
 
   refreshState(eventData)
@@ -27,6 +28,12 @@ class FloWaterSensor {
     this.currentTemperature = eventData.device.temperature || -180;
     this.currentHumidity = eventData.device.humidity || 0.0;
     this.batteryLevel = eventData.device.batterylevel || 0;
+
+    // Is device offline?
+    if ((eventData.device.offline > 0 ) || (eventData.device.isConnected == false )) 
+      this.systemTampered = this.Characteristic.StatusTampered.TAMPERED;
+    else
+      this.systemTampered = this.Characteristic.StatusTampered.NOT_TAMPERED;
 
     // get the leak sensor service to update status
     const leakService = this.accessory.getService(this.Service.LeakSensor);
@@ -38,10 +45,7 @@ class FloWaterSensor {
      else  { 
       this.leakDected = false;
       leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
-      this.systemFault =  eventData.device.offline || 0;
-      // if no leak is detected and we have warnings critical errors set general fault.
-      if (this.systemFault > 0) leakService.updateCharacteristic(this.Characteristic.StatusFault, this.Characteristic.StatusFault.GENERAL_FAULT);
-      else leakService.updateCharacteristic(this.Characteristic.StatusFault, this.Characteristic.StatusFault.NO_FAULT);
+      leakService.updateCharacteristic(this.Characteristic.StatusTampered, this.systemTampered);
     }
   }
 
@@ -55,9 +59,10 @@ class FloWaterSensor {
 
     // Add leak sensor
     var leakService = this.accessory.getService(this.Service.LeakSensor);
-    if(leakService == undefined) leakService = this.accessory.addService(this.Service.LeakSensor); 
+    if(leakService == undefined) leakService = this.accessory.addService(this.Service.LeakSensor, this.name); 
     leakService.getCharacteristic(this.Characteristic.LeakDetected)
         .on('get', async callback => this.getLeakStatus(callback));
+    leakService.setCharacteristic(this.Characteristic.StatusTampered, this.Characteristic.StatusTampered.NOT_TAMPERED);
 
     // Add battery service
     var batteryService = this.accessory.getService(this.Service.Battery);
