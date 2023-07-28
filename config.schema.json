@@ -62,7 +62,7 @@
         "title": "Treat Warning as Critical Events",
         "type": "boolean",
         "default": false,
-        "description": "By default <i>Warning</i> are treated as system faults. This option allows <i>Warning</i> to be treated as <i>Critical</i> events thus trigging the alarm."
+        "description": "This option allows <i>Warning</i> to be treated as <i>Critical</i> events thus trigging the alarm."
       },
         "deviceRefresh": {
         "title": "Device Refresh Interval (seconds)",

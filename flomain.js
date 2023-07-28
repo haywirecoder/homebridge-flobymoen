@@ -247,6 +247,7 @@ class FlobyMoem extends EventEmitter {
                                             device.systemTargetState = device_info.data.systemMode.target;
                                             device.valveCurrentState = device_info.data.valve.lastKnown;
                                             device.valveTargetState = device_info.data.valve.target || device.valveCurrentState;
+                                            device.isInstalled = device_info.data.installStatus.isInstalled;
                                             this.getConsumption(device);
                                             break;
                                         default:
@@ -269,7 +270,7 @@ class FlobyMoem extends EventEmitter {
                 }
                 return true;
         } catch(err) {
-            this.log.error("Flo Location Load Error: " + err.message);
+            this.log.error("Device Discovery Unsuccessful Error:  " + err.message + ". Please check configuration and restart the plug-in");
             return false;
         }
 
@@ -513,6 +514,7 @@ class FlobyMoem extends EventEmitter {
                         this.flo_devices[deviceIndex].valveCurrentState = device_info.data.valve.target;
 
                     this.flo_devices[deviceIndex].valveTargetState = device_info.data.valve.target;
+                    this.flo_devices[deviceIndex].isInstalled =  device_info.data.installStatus.isInstalled;
                 break;
             } 
            

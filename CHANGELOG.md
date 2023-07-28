@@ -1,13 +1,24 @@
-# Change Log
-
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
-# v1.0.7 (2023-07-15)
+# Change Log
+ v1.0.9 (2023-07-28)
+### Enhancements
+* Create a tamper event when smart valve has an issued.
+* General enhancement for valve functionality and state information.
+
+# v1.0.8 (2023-07-15)
 
 ### Enhancements
 * Create option when to log 502 errors.
 
 ### Break fixes
 * Fix general fault logic for all devices.
+
+# v1.0.7 (2023-02-10)
+### Enhancements
+* Generate general fault in homekit when battery device hasn't communicated with the service for pre-determine time.
+
+### Break fixes
+* Spelling and Typo fix.
 
 ## v1.0.6 (2022-08-22)
 ### Break fixes
