@@ -250,7 +250,6 @@ class FlobyMoem extends EventEmitter {
                                             device.valveTargetState = device_info.data.valve.target || device.valveCurrentState;
                                             device.isInstalled = device_info.data.installStatus.isInstalled;
                                             this.getConsumption(device);
-                                            this.log("Flov-------", device_info.data);
                                             break;
                                         default:
                                             this.log("Unsupported Device found.");
@@ -501,6 +500,7 @@ class FlobyMoem extends EventEmitter {
                 case FLO_SMARTWATER:
                     this.flo_devices[deviceIndex].psi = device_info.data.telemetry.current.psi;
                     this.flo_devices[deviceIndex].gpm = device_info.data.telemetry.current.gpm;
+                    this.flo_devices[deviceIndex].temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
                     // New installation may not has lastknown state, set to target state.
                     if (device_info.data.systemMode.lastKnown) 
                         this.flo_devices[deviceIndex].systemCurrentState = device_info.data.systemMode.lastKnown;
