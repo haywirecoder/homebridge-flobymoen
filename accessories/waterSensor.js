@@ -30,7 +30,7 @@ class FloWaterSensor {
     this.batteryLevel = eventData.device.batterylevel || 0;
 
     // Is device offline?
-    if ((eventData.device.offline > 0 ) || (eventData.device.isConnected == false )) 
+    if ((eventData.device.offline != 0 ) || (eventData.device.isConnected == false )) 
       this.systemTampered = this.Characteristic.StatusTampered.TAMPERED;
     else
       this.systemTampered = this.Characteristic.StatusTampered.NOT_TAMPERED;
@@ -41,6 +41,7 @@ class FloWaterSensor {
     { 
       this.leakDected = true; 
       leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_DETECTED);
+      leakService.updateCharacteristic(this.Characteristic.StatusTampered, this.systemTampered);
     }
      else  { 
       this.leakDected = false;
