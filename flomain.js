@@ -243,12 +243,14 @@ class FlobyMoem extends EventEmitter {
                                         case FLO_SMARTWATER:
                                             device.psi = device_info.data.telemetry.current.psi;
                                             device.gpm = device_info.data.telemetry.current.gpm;
+                                            device.temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
                                             device.systemCurrentState = device_info.data.systemMode.lastKnown;
                                             device.systemTargetState = device_info.data.systemMode.target;
                                             device.valveCurrentState = device_info.data.valve.lastKnown;
                                             device.valveTargetState = device_info.data.valve.target || device.valveCurrentState;
                                             device.isInstalled = device_info.data.installStatus.isInstalled;
                                             this.getConsumption(device);
+                                            this.log("Flov-------", device_info.data);
                                             break;
                                         default:
                                             this.log("Unsupported Device found.");

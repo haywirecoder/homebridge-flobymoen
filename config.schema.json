@@ -125,6 +125,16 @@
         "default": 3,
         "description": "At times the plug-in reports a 502 error. This is a communication error with the Flo server. An occasional error will not effect operations but can fill up log. This value define number of consecutive failure before logging.",
         "minimum": 3
+      },
+      "showFloTemperature": {
+        "title": "Show the temperature of Flo value.",
+        "type": "boolean",
+        "default": true
+      },
+      "showGPMPSIasLight": {
+        "title": "Show the current Gallons Per Minute (GPM) and Water Pressure (PSI) value as lux sensors.",
+        "type": "boolean",
+        "default": false
       }
     }
   },
@@ -148,9 +158,12 @@
       "expandable": true,
       "title": "Advanced Options",
       "items": [
+        "showFloTemperature",
+        "showGPMPSIasLight",
         {
           "key": "disableCache",
           "description": "Disabled the storage of Flo access token to local Homebridge server. Refresh token at start-up."
+
         },
         {
           "key": "excludedDevices",
@@ -167,7 +180,6 @@
             }
           ]
         },
-        "pingRefresh",
         "retryErrorDisplay"
       ]
     }
