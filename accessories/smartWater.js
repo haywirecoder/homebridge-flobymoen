@@ -14,13 +14,10 @@ class FloSmartWater {
     this.serialNumber = device.serialNumber;
     this.location = device.location;
     this.version = device.version;
-    this.gallonsPerMin = device.gpm;
-    this.pressure = device.psi;
     this.isInstalled = device.isInstalled;
     this.currentTemperature = device.temperature || -180;
 
     this.isFloTemperature = config.showFloTemperature ? config.showFloTemperature : true;
-    this.IsGpmPSI = config.showGPMPSIasLight ? config.showGPMPSIasLight : false;
     this.deviceid = device.deviceid.toString();
     this.uuid = UUIDGen.generate(this.deviceid);
 
@@ -117,7 +114,8 @@ class FloSmartWater {
     // Update valve state
     valveService.updateCharacteristic(this.Characteristic.Active,this.VALVE_ACTIVE_STATE[this.valveStatus]);
     valveService.updateCharacteristic(this.Characteristic.InUse,this.VALVE_INUSE_STATE[this.valveStatus]);
-    valveService.updateCharacteristic(this.Characteristic.IsConfigured,this.VALVE_CONFIGURED_STATE[this.isInstalled]);
+
+    //valveService.updateCharacteristic(this.Characteristic.IsConfigured,this.VALVE_CONFIGURED_STATE[this.isInstalled]);
    
     // Update mode state
     securityService.updateCharacteristic(this.Characteristic.SecuritySystemCurrentState, this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]);
@@ -134,9 +132,10 @@ class FloSmartWater {
     this.accessory = accessory;
     this.accessory.getService(this.Service.AccessoryInformation)
         .setCharacteristic(this.Characteristic.Manufacturer, 'Moen')
-        .setCharacteristic(this.Characteristic.Model, 'SW Shutoff ' + this.model)
+        .setCharacteristic(this.Characteristic.Model, 'Smart Shutoff Valve - ' + this.model)
         .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber)
         .setCharacteristic(this.Characteristic.FirmwareRevision, this.version);
+
 
     var securityService = this.accessory.getService(this.Service.SecuritySystem);
     if(securityService == undefined) securityService = this.accessory.addService(this.Service.SecuritySystem, this.name + ' Water System');
@@ -152,60 +151,36 @@ class FloSmartWater {
 
     // create a new Valve service
     var valveService = this.accessory.getService(this.Service.Valve);
-    if(valveService == undefined) valveService = this.accessory.addService(this.Service.Valve, this.name + ' Flo Valve'); 
+    if(valveService == undefined) valveService = this.accessory.addService(this.Service.Valve, this.name + ' Valve'); 
     // create handlers for required characteristics
-    valveService.setCharacteristic(this.Characteristic.Name, this.name + ' Flo Valve'); 
+    valveService.setCharacteristic(this.Characteristic.Name, this.name + ' Valve'); 
+    valveService.setCharacteristic(this.Characteristic.ValveType, 0);
+
+    valveService.setCharacteristic(this.Characteristic.SetDuration, 0);
+    valveService.setCharacteristic(this.Characteristic.RemainingDuration, 0);
     valveService.getCharacteristic(this.Characteristic.Active)
         .on('get', async callback => this.getValveActive(callback))
         .on('set', async (state, callback) => this.setValveActive(state, callback));
     valveService.getCharacteristic(this.Characteristic.InUse)
         .on('get', async callback => this.getValveInUse(callback));
-    valveService.getCharacteristic(this.Characteristic.ValveType)
-        .on('get', async callback => this.getValveType(callback));
     valveService.setCharacteristic(this.Characteristic.StatusFault, this.systemFault);
     valveService.setCharacteristic(this.Characteristic.IsConfigured,this.VALVE_CONFIGURED_STATE[this.isInstalled]);
 
-    var tempService;
-    var lightSensorPSIService;
-    var lightSensorGPMService;
+    var temperatureService;
     if (this.isFloTemperature)
     {
       // Add temperature sensor
-      tempService = this.accessory.getService(this.Service.TemperatureSensor);
-      if (tempService == undefined) tempService = this.accessory.addService(this.Service.TemperatureSensor);  
+      temperatureService = this.accessory.getService(this.Service.TemperatureSensor);
+      if (temperatureService == undefined) temperatureService = this.accessory.addService(this.Service.TemperatureSensor);  
       // create handlers for required characteristics
-      tempService.getCharacteristic(this.Characteristic.CurrentTemperature)
+      temperatureService.getCharacteristic(this.Characteristic.CurrentTemperature)
           .on('get', async callback => this.getCurrentTemperature(callback));
     }
     else {
       // Remove service if already created in cache accessory
-      tempService = this.accessory.getService(this.Service.TemperatureSensor);
-      if (tempService!= undefined) this.accessory.removeService(tempService);
+      temperatureService = this.accessory.getService(this.Service.TemperatureSensor);
+      if (temperatureService!= undefined) this.accessory.removeService(temperatureService);
     }
-
-    if (this.IsGpmPSI)
-    {
-      // // Created two light sensors to report GPM and PSI sensor
-      lightSensorPSIService = this.accessory.getServiceById(this.Service.LightSensor,"PSIService");
-      if (lightSensorPSIService == undefined) lightSensorPSIService = this.accessory.addService(this.Service.LightSensor,"PSI","PSIService");  
-      // create handlers for required characteristics
-      lightSensorPSIService.getCharacteristic(this.Characteristic.CurrentAmbientLightLevel)
-      .on('get', async callback => this.getCurrentPSI(callback));
-
-     lightSensorGPMService = this.accessory.getServiceById(this.Service.LightSensor,"GPMService");
-      if (lightSensorGPMService == undefined) lightSensorGPMService = this.accessory.addService(this.Service.LightSensor,"GPM","GPMService");  
-      // create handlers for required characteristics
-      lightSensorGPMService.getCharacteristic(this.Characteristic.CurrentAmbientLightLevel)
-      .on('get', async callback => this.getCurrentGPM(callback));
-    }
-    else {
-      // // Remove service if already created in cache accessory
-      lightSensorPSIService =  this.accessory.getServiceById(this.Service.LightSensor,"PSIService");
-      if (lightSensorPSIService!= undefined) this.accessory.removeService(lightSensorPSIService);
-      lightSensorGPMService = this.accessory.getServiceById(this.Service.LightSensor,"GPMService");
-      if (lightSensorGPMService!= undefined) this.accessory.removeService(lightSensorGPMService);
-    }
-
   }
 
 
@@ -230,7 +205,7 @@ async setTargetState(homekitState, callback) {
 
 // Handle requests to get the current value of the "Active" characteristic
 async getValveActive(callback) {
-
+  this.log.debug("Trigger Get Valve Active");
   // Assume on and disable if state is close
   var currentValue = this.VALVE_ACTIVE_STATE[this.valveStatus];
   return callback(null, currentValue);
@@ -238,6 +213,7 @@ async getValveActive(callback) {
 
 // Handle requests to set the "Active" characteristic
 async setValveActive(homekitState, callback) {
+  this.log.info("Trigger Set Valve Active");
   if (this.IsValveControlEnabled) {
     if (homekitState == this.Characteristic.Active.ACTIVE) 
     {  
@@ -260,14 +236,8 @@ async setValveActive(homekitState, callback) {
 async getValveInUse(callback) {
   // var currentValue = this.Characteristic.InUse.NOT_IN_USE;
   // set this to a valid value for In-Use base meter usage
+  this.log.debug("Trigger Get Valve In Use");
   var currentValue = this.VALVE_INUSE_STATE[this.valveStatus];
-  return callback(null, currentValue);
-}
-
-// Handle requests to get the current value of the "Valve Type" characteristic
-async getValveType(callback) {
-  // set this to a valid value for ValveType
-  var currentValue = this.Characteristic.ValveType.GENERIC_VALVE;
   return callback(null, currentValue);
 }
 
@@ -276,20 +246,6 @@ async getCurrentTemperature(callback) {
     // set this to a valid value for CurrentTemperature
     return callback(null,this.currentTemperature);
   }
-  //Handle requests to get the current value of the "Current light PSI" characteristic
-async getCurrentPSI(callback) {
-  // set this to a valid value for CurrentTemperature
-  return callback(null,this.pressure);
-}
-//Handle requests to get the current value of the "Current light for GPM" characteristic
-async getCurrentGPM(callback) {
-  // set this to a valid value for CurrentTemperature
-  if (this.gallonsPerMin == 0) 
-    return callback(null,0.0001);
-  else 
-    return callback(null,this.gallonsPerMin);
-}
-
 }
 
 
