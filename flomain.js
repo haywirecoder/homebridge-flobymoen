@@ -249,6 +249,7 @@ class FlobyMoem extends EventEmitter {
                                             device.valveCurrentState = device_info.data.valve.lastKnown;
                                             device.valveTargetState = device_info.data.valve.target || device.valveCurrentState;
                                             device.isInstalled = device_info.data.installStatus.isInstalled;
+                                            device.isConnected =  device_info.data.installStatus.isConnected;
                                             this.getConsumption(device);
                                             break;
                                         default:
@@ -517,6 +518,7 @@ class FlobyMoem extends EventEmitter {
 
                     this.flo_devices[deviceIndex].valveTargetState = device_info.data.valve.target;
                     this.flo_devices[deviceIndex].isInstalled =  device_info.data.installStatus.isInstalled;
+                    this.flo_devices[deviceIndex].isConnected =  device_info.data.installStatus.isConnected;
                 break;
             } 
            

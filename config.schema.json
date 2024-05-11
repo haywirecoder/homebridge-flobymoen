@@ -58,6 +58,12 @@
         "default": false,
         "description": "Display a Health Test switch button to start a manual Health Test in Flo."
       },
+        "showAuxSwitch": {
+        "title": "Create a switch for turn on/off water shutoff",
+        "type": "boolean",
+        "default": false,
+        "description": "Display am auxiliary water shutoff switch, useful in automations."
+      },
         "treatWarningAsCritical": {
         "title": "Treat Warning as Critical Events",
         "type": "boolean",
@@ -150,6 +156,7 @@
         "showHealthTestSwitch",
         "enableValveControl",
         "treatWarningAsCritical",
+        "showAuxSwitch",
         "offlineTimeLimit"
       ]
     },

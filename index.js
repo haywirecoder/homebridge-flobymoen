@@ -28,6 +28,7 @@ class FloByMoenPlatform {
     this.persistPath = undefined;
     this.config = config;
     
+    
 
     // Check if authentication information has been provided.
     try{
@@ -88,6 +89,9 @@ class FloByMoenPlatform {
   // Process each flo devices and create accessories within the platform. smart water value and water sensor classes 
   // will handle the creation and setting callback for each device types.
   var IsHealthSwitchEnabled = this.config.showHealthTestSwitch ? this.config.showHealthTestSwitch : false;
+  var IsAuxFloSwitchEnabled = this.config.showAuxSwitch ? this.config.showAuxSwitch : false;
+  var IsGpmPSIlux =  this.config.showGPMPSIasLight ? config.showGPMPSIasLight : false;
+
   if (this.flo.flo_devices.length <=0 ) return;
   for (var i = 0; i < this.flo.flo_devices.length; i++) {
     let currentDevice = this.flo.flo_devices[i];
@@ -107,12 +111,13 @@ class FloByMoenPlatform {
           else // accessory already exist just set characteristic
             smartWaterAccessory.setAccessory(foundAccessory);
           if(IsHealthSwitchEnabled) {
+              this.config.switchType = "healthswitch";
               var healthswitch = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
               // check the accessory was not restored from cache
               var foundAccessory = this.accessories.find(accessory => accessory.UUID === healthswitch.uuid)
               if (!foundAccessory) {
                 // create a new accessory
-                let newAccessory = new this.api.platformAccessory(currentDevice.name +" Health Test", healthswitch.uuid);
+                let newAccessory = new this.api.platformAccessory(currentDevice.name + " Health Test", healthswitch.uuid);
                 // add services and Characteristic
                 healthswitch.setAccessory(newAccessory);
                 // register the accessory
@@ -123,7 +128,46 @@ class FloByMoenPlatform {
               // This a accessories not base on flo device list, track it in another list for future use.
               this.optionalAccessories.push(healthswitch);
           }
+          if(IsAuxFloSwitchEnabled) {
+            this.config.switchType = "auxswitch";
+            var auxfloswitch = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
+            // check the accessory was not restored from cache
+            var foundAccessory = this.accessories.find(accessory => accessory.UUID === auxfloswitch.uuid)
+            if (!foundAccessory) {
+              // create a new accessory
+              let newAccessory = new this.api.platformAccessory(currentDevice.name + " Water Control", auxfloswitch.uuid);
+              // add services and Characteristic
+              auxfloswitch.setAccessory(newAccessory);
+              // register the accessory
+              this.addAccessory(auxfloswitch);
+            }
+            else // accessory already exist just set characteristic
+              auxfloswitch.setAccessory(foundAccessory);
+            // This a accessories not base on flo device list, track it in another list for future use.
+            this.optionalAccessories.push(auxfloswitch);
+          }
+
+          if(IsGpmPSIlux) {
+            this.config.switchType = "gpmPSIlux";
+            var gpmPSIluxsensor = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
+            // check the accessory was not restored from cache
+            var foundAccessory = this.accessories.find(accessory => accessory.UUID === gpmPSIluxsensor.uuid)
+            if (!foundAccessory) {
+              // create a new accessory
+              let newAccessory = new this.api.platformAccessory(currentDevice.name + " Sensors", gpmPSIluxsensor.uuid);
+              // add services and Characteristic
+              gpmPSIluxsensor.setAccessory(newAccessory);
+              // register the accessory
+              this.addAccessory(gpmPSIluxsensor);
+            }
+            else // accessory already exist just set characteristic
+              gpmPSIluxsensor.setAccessory(foundAccessory);
+            // This a accessories not base on flo device list, track it in another list for future use.
+            this.optionalAccessories.push(gpmPSIluxsensor);
+          }
+      break;
         break; 
+        
         case FLO_WATERSENSOR: 
           var waterAccessory = new watersensor(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
           // check the accessory was not restored from cache
