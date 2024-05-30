@@ -233,7 +233,7 @@ class FlobyMoem extends EventEmitter {
                                     switch (device_info.data.deviceType) {
                                         case FLO_WATERSENSOR:
                                             // homekit expect temperatures in celsius and allow homekit to perform conversion if needed.
-                                            device.temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
+                                            device.temperature = (device_info.data.telemetry.current.tempF - 32) * 5 / 9;;
                                             device.humidity = device_info.data.telemetry.current.humidity;
                                             // Return whether water is detected, for leak detectors.
                                             device.waterdetect = device_info.data.fwProperties.telemetry_water;
@@ -241,9 +241,9 @@ class FlobyMoem extends EventEmitter {
                                             device.batterylevel = device_info.data.battery.level;
                                             break;
                                         case FLO_SMARTWATER:
-                                            device.psi = device_info.data.telemetry.current.psi;
-                                            device.gpm = device_info.data.telemetry.current.gpm;
-                                            device.temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
+                                            device.psi = device_info.data.telemetry.current.psi || 0;;
+                                            device.gpm = device_info.data.telemetry.current.gpm || 0;;
+                                            device.temperature = (device_info.data.telemetry.current.tempF - 32) * 5 / 9;
                                             device.systemCurrentState = device_info.data.systemMode.lastKnown;
                                             device.systemTargetState = device_info.data.systemMode.target;
                                             device.valveCurrentState = device_info.data.valve.lastKnown;
@@ -499,9 +499,10 @@ class FlobyMoem extends EventEmitter {
                     this.flo_devices[deviceIndex].batterylevel = device_info.data.battery.level;
                 break;
                 case FLO_SMARTWATER:
-                    this.flo_devices[deviceIndex].psi = device_info.data.telemetry.current.psi;
-                    this.flo_devices[deviceIndex].gpm = device_info.data.telemetry.current.gpm;
+                    this.flo_devices[deviceIndex].psi = device_info.data.telemetry.current.psi || 0;
+                    this.flo_devices[deviceIndex].gpm = device_info.data.telemetry.current.gpm || 0;
                     this.flo_devices[deviceIndex].temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
+
                     // New installation may not has lastknown state, set to target state.
                     if (device_info.data.systemMode.lastKnown) 
                         this.flo_devices[deviceIndex].systemCurrentState = device_info.data.systemMode.lastKnown;
