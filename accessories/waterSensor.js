@@ -6,6 +6,7 @@ class FloWaterSensor {
     this.Service = Service;
     this.serialNumber = device.serialNumber;
     this.model = device.deviceModel;
+    this.surpressNoticationFlag =  config.surpressWaterNotification || false;
     this.log = log;
     this.name = device.name;
     this.version = device.version;
@@ -28,6 +29,7 @@ class FloWaterSensor {
     this.currentTemperature = eventData.device.temperature || -180;
     this.currentHumidity = eventData.device.humidity || 0.0;
     this.batteryLevel = eventData.device.batterylevel || 0;
+    var leakdectedOnCritical = false;
 
     // Is device offline?
     if ((eventData.device.offline != 0 ) || (eventData.device.isConnected == false )) 
@@ -35,9 +37,13 @@ class FloWaterSensor {
     else
       this.systemTampered = this.Characteristic.StatusTampered.NOT_TAMPERED;
 
+    // Should leak clear once water is not longer detect ?
+    if (this.surpressNotication == false) 
+      if(eventData.device.notifications.criticalCount > 0) leakdectedOnCritical = true;
+
     // get the leak sensor service to update status
     const leakService = this.accessory.getService(this.Service.LeakSensor);
-    if((eventData.device.notifications.criticalCount > 0) || (eventData.device.waterdetect))
+    if((leakdectedOnCritical) || (eventData.device.waterdetect))
     { 
       this.leakDected = true; 
       leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_DETECTED);
