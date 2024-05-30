@@ -70,6 +70,12 @@
         "default": false,
         "description": "This option allows <i>Warning</i> to be treated as <i>Critical</i> events thus trigging the alarm."
       },
+       "surpressWaterNotification": {
+        "title": "Auto clear Leak detection",
+        "type": "boolean",
+        "default": false,
+        "description": "By default the leak event remain active until it is clear within the flo system, this option allows the plug-in to auto clear when water is no longer detected."
+      },
         "deviceRefresh": {
         "title": "Device Refresh Interval (seconds)",
         "type": "integer",
@@ -85,7 +91,7 @@
         "minimum": 1,
         "maximum": 24
       },
-      "offlineTimeLimit": {
+        "offlineTimeLimit": {
         "title": "Offline Time Limit (hours)",
         "type": "integer",
         "description": "Number of house with no refresh before considering device offline.",
@@ -155,7 +161,6 @@
         "showTemperatureAndHumidity",
         "showHealthTestSwitch",
         "enableValveControl",
-        "treatWarningAsCritical",
         "showAuxSwitch",
         "offlineTimeLimit"
       ]
@@ -167,6 +172,8 @@
       "items": [
         "showFloTemperature",
         "showGPMPSIasLight",
+        "treatWarningAsCritical",
+        "surpressWaterNotification",
         {
           "key": "disableCache",
           "description": "Disabled the storage of Flo access token to local Homebridge server. Refresh token at start-up."
