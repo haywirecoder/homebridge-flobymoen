@@ -1,5 +1,12 @@
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
 # Change Log
+ v1.0.10 (2024-06-11)
+### Enhancements
+* Create an option to clear of leak sensor when no water is detected (#14 )
+* Add an optional switch to control the water valve, for automation in Apple Home applications (#12).
+* Expose the current Gallons Per Minute (GPM) and Water Pressure (PSI) values as lux sensors (#9)
+* Dependency updates
+
  v1.0.9 (2023-07-28)
 ### Enhancements
 * Generate a tamper event when the smart valve has a problem.
