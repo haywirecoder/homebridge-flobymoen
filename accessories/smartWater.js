@@ -75,7 +75,7 @@ class FloSmartWater {
     this.gallonsPerMin = eventData.device.gpm;
     this.isInstalled = eventData.device.isInstalled;
     this.pressure = eventData.device.psi;
-    this.currentTemperature = eventData.device.temperature || -180;
+    this.currentTemperature = eventData.device.temperature.toFixed(2) || -180;
 
     // get security system
     const securityService = this.accessory.getService(this.Service.SecuritySystem);

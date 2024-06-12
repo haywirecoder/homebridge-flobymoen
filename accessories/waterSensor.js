@@ -13,6 +13,7 @@ class FloWaterSensor {
     this.currentTemperature = device.temperature || -180;
     this.currentHumidity = device.humidity || 0.0;
     this.leakDected = false;
+    this.isConnected = device.isConnected;
     this.batteryLevel = device.batterylevel || 0;
     this.IsTemperatureAndHumidity = config.showTemperatureAndHumidity ? config.showTemperatureAndHumidity : true;
     this.flo = flo;
@@ -69,7 +70,11 @@ class FloWaterSensor {
     if(leakService == undefined) leakService = this.accessory.addService(this.Service.LeakSensor, this.name); 
     leakService.getCharacteristic(this.Characteristic.LeakDetected)
         .on('get', async callback => this.getLeakStatus(callback));
-    leakService.setCharacteristic(this.Characteristic.StatusTampered, this.Characteristic.StatusTampered.NOT_TAMPERED);
+  
+    if (this.isConnected == false)  
+      leakService.setCharacteristic(this.Characteristic.StatusTampered, this.Characteristic.StatusTampered.TAMPERED);
+    else
+      leakService.setCharacteristic(this.Characteristic.StatusTampered, this.Characteristic.StatusTampered.NOT_TAMPERED);
 
     // Add battery service
     var batteryService = this.accessory.getService(this.Service.Battery);
