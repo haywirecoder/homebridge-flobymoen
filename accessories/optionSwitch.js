@@ -1,5 +1,8 @@
 "use strict";
 const HealthTestRunTime = 240000;
+const FLO_VALVE_OPEN = 'open';
+const FLO_VALVE_CLOSE = 'closed';
+
 class FloOptionSwitch { 
     constructor(flo, device, log, config, Service, Characteristic, UUIDGen) {
     this.Characteristic = Characteristic;
