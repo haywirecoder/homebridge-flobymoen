@@ -59,10 +59,10 @@
         "description": "Display a Health Test switch button to start a manual Health Test in Flo."
       },
         "showAuxSwitch": {
-        "title": "Create a switch for turn on/off water shutoff",
+        "title": "Create additional switch for turning on/off the water shutoff",
         "type": "boolean",
         "default": false,
-        "description": "Display am auxiliary water shutoff switch, useful in automations."
+        "description": "Display an auxiliary water shutoff switch. This useful in the Home application, other Homekit applications such as Eve expose the Flo valve for automation."
       },
         "treatWarningAsCritical": {
         "title": "Treat Warning as Critical Events",
@@ -71,7 +71,7 @@
         "description": "This option allows <i>Warning</i> to be treated as <i>Critical</i> events thus trigging the alarm."
       },
        "surpressWaterNotification": {
-        "title": "Auto clear Leak detection",
+        "title": "Auto Clear Leak Detection",
         "type": "boolean",
         "default": false,
         "description": "By default the leak event remain active until it is clear within the flo system, this option allows the plug-in to auto clear when water is no longer detected."
