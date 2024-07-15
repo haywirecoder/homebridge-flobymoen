@@ -62,7 +62,7 @@
         "title": "Create additional switch for turning on/off the water shutoff",
         "type": "boolean",
         "default": false,
-        "description": "Display an auxiliary water shutoff switch. This useful in the Home application, other Homekit applications such as Eve expose the Flo valve for automation."
+        "description": "Display an auxiliary water shutoff switch. This is useful in Apple's Home application, other Homekit applications such as Eve exposes the Flo valve for automation."
       },
         "treatWarningAsCritical": {
         "title": "Treat Warning as Critical Events",
