@@ -59,10 +59,10 @@
         "description": "Display a Health Test switch button to start a manual Health Test in Flo."
       },
         "showAuxSwitch": {
-        "title": "Create additional switch for turning on/off the water shutoff",
+        "title": "Create additional switch for turning on/off the water valve",
         "type": "boolean",
         "default": false,
-        "description": "Display an auxiliary water shutoff switch. This is useful in Apple's Home application, other Homekit applications such as Eve exposes the Flo valve for automation."
+        "description": "Display an auxiliary water on/off switch. This is useful in Apple's Home application, other Homekit applications such as Eve exposes the Flo valve for automation."
       },
         "treatWarningAsCritical": {
         "title": "Treat Warning as Critical Events",
