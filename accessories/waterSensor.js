@@ -15,7 +15,7 @@ class FloWaterSensor {
     this.leakDected = false;
     this.isConnected = device.isConnected;
     this.batteryLevel = device.batterylevel || 0;
-    this.IsTemperatureAndHumidity = config.showTemperatureAndHumidity ? config.showTemperatureAndHumidity : true;
+    this.IsTemperatureAndHumidity = config.showTemperatureAndHumidity ?? true;
     this.flo = flo;
     this.deviceid = device.deviceid.toString();
     this.uuid = UUIDGen.generate(this.deviceid);
