@@ -3,8 +3,8 @@ All notable changes to this project will be documented in this file. This projec
 
 # v1.0.12 (2024-07-25)
 ## Break fixes
-* Fix Aux switch and update document to reflect only needed in Home app (#13)
-* Fix optional switch for Temperature and Humidity for water sensor (#14)
+* Fix auxiliary shutoff switch and updated document to reflect only needed for the Home app automation (#13)
+* Fix optional parameter for Temperature and Humidity for water sensor (#14)
 
 # v1.0.11 (2024-06-11)
 ## Break fixes
