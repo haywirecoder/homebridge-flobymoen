@@ -6,13 +6,13 @@ class FloWaterSensor {
     this.Service = Service;
     this.serialNumber = device.serialNumber;
     this.model = device.deviceModel;
-    this.surpressNoticationFlag =  config.surpressWaterNotification || false;
+    this.suppressNoticationFlag =  config.surpressWaterNotification || false;
     this.log = log;
     this.name = device.name;
     this.version = device.version;
     this.currentTemperature = device.temperature || -180;
     this.currentHumidity = device.humidity || 0.0;
-    this.leakDected = false;
+    this.leakDetected = false;
     this.isConnected = device.isConnected;
     this.batteryLevel = device.batterylevel || 0;
     this.IsTemperatureAndHumidity = config.showTemperatureAndHumidity ?? true;
@@ -30,7 +30,7 @@ class FloWaterSensor {
     this.currentTemperature = eventData.device.temperature || -180;
     this.currentHumidity = eventData.device.humidity || 0.0;
     this.batteryLevel = eventData.device.batterylevel || 0;
-    var leakdectedOnCritical = false;
+    var leakDetectedOnCritical = false;
 
     // Is device offline?
     if ((eventData.device.offline != 0 ) || (eventData.device.isConnected == false )) 
@@ -39,19 +39,19 @@ class FloWaterSensor {
       this.systemTampered = this.Characteristic.StatusTampered.NOT_TAMPERED;
 
     // Should leak clear once water is not longer detect ?
-    if (this.surpressNotication == false) 
-      if(eventData.device.notifications.criticalCount > 0) leakdectedOnCritical = true;
+    if (this.suppressNoticationFlag == false) 
+      if(eventData.device.notifications.criticalCount > 0) leakDetectedOnCritical = true;
 
     // get the leak sensor service to update status
     const leakService = this.accessory.getService(this.Service.LeakSensor);
-    if((leakdectedOnCritical) || (eventData.device.waterdetect))
+    if(leakDetectedOnCritical || eventData.device.waterdetect)
     { 
-      this.leakDected = true; 
+      this.leakDetected = true; 
       leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_DETECTED);
       leakService.updateCharacteristic(this.Characteristic.StatusTampered, this.systemTampered);
     }
      else  { 
-      this.leakDected = false;
+      this.leakDetected = false;
       leakService.updateCharacteristic(this.Characteristic.LeakDetected, this.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
       leakService.updateCharacteristic(this.Characteristic.StatusTampered, this.systemTampered);
     }
@@ -61,7 +61,7 @@ class FloWaterSensor {
     this.accessory = accessory;
     this.accessory.getService(this.Service.AccessoryInformation)
         .setCharacteristic(this.Characteristic.Manufacturer, 'Moen')
-        .setCharacteristic(this.Characteristic.Model, 'Water Sesnor ' + this.model)
+        .setCharacteristic(this.Characteristic.Model, 'Water Sensor ' + this.model)
         .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber)
         .setCharacteristic(this.Characteristic.FirmwareRevision, this.version);
 
@@ -116,7 +116,7 @@ class FloWaterSensor {
   }
 
   async getLeakStatus(callback) {
-    if (this.leakDected)
+    if (this.leakDetected)
     {
       return callback(null, this.Characteristic.LeakDetected.LEAK_DETECTED); 
     } else {

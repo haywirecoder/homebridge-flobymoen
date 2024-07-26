@@ -159,7 +159,7 @@ class FlobyMoem extends EventEmitter {
             // Set timer to obtain new token
             var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
             // Display refreshing token information 
-            this.log.info(`Flo Info: Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} mins(s).`);
+            this.log.info(`Flo Info: Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
             return true;
         
         }
@@ -533,7 +533,7 @@ class FlobyMoem extends EventEmitter {
         } 
         catch(err) {
                 // At times the plug-in reports a 502 error. This is a communication error with the Flo server,
-                // an occasional error will not effect operations, surpress unless it occuring frequenctly.
+                // an occasional error will not effect operations, suppress unless it is occurring frequently.
                 if(err.response.status == 502)
                 {
                     this.flo_devices[deviceIndex].errorCount += 1;
