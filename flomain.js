@@ -17,7 +17,7 @@ const TIMEOUT = 120000;
 const FLO_WATERSENSOR ='puck_oem';
 const FLO_SMARTWATER = 'flo_device_v2';
 
-class FlobyMoem extends EventEmitter {
+class FlobyMoen extends EventEmitter {
     auth_token = {};
     flo_devices = [];
     flo_locations = [];
@@ -253,7 +253,7 @@ class FlobyMoem extends EventEmitter {
                                             this.getConsumption(device);
                                             break;
                                         default:
-                                            this.log("Unsupported Device found.");
+                                            this.log("Unsupported Device Found.");
                                             this.log(device_info.data);
 
                                     } 
@@ -628,4 +628,4 @@ class FlobyMoem extends EventEmitter {
         this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 
     }
 }
-module.exports = FlobyMoem;
+module.exports = FlobyMoen;

@@ -1,10 +1,16 @@
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
 # Change Log
 
+# v1.0.13 (2024-07-27)
+## Break fixes
+* Fix typo on device information for water sensors
+* Fix issue with code not properly reading configuration associated with enhancement (#14). Please note this resulted in changing this attribute from surpressWaterNotification to clearOnNoLeak. Please refer to updated readme
+
 # v1.0.12 (2024-07-25)
 ## Break fixes
 * Fix auxiliary shutoff switch and updated document to reflect only needed for the Home app automation (#13)
 * Fix optional parameter for Temperature and Humidity for water sensor (#14)
+
 
 # v1.0.11 (2024-06-11)
 ## Break fixes
