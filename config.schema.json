@@ -70,7 +70,7 @@
         "default": false,
         "description": "This option allows <i>Warning</i> to be treated as <i>Critical</i> events thus trigging the alarm."
       },
-       "surpressWaterNotification": {
+       "clearOnNoLeak": {
         "title": "Auto Clear Leak Detection",
         "type": "boolean",
         "default": false,
@@ -173,7 +173,7 @@
         "showFloTemperature",
         "showGPMPSIasLight",
         "treatWarningAsCritical",
-        "surpressWaterNotification",
+        "clearOnNoLeak",
         {
           "key": "disableCache",
           "description": "Disabled the storage of Flo access token to local Homebridge server. Refresh token at start-up."
