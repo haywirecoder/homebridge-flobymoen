@@ -12,11 +12,11 @@ class FloOptionSwitch {
     this.serialNumber = device.serialNumber;
     this.log = log;
     this.switchType = config.switchType;
-    this.deviceid = device.deviceid + "-" + this.switchType;
+    this.deviceid = device.deviceid.toString();
     this.busy = false;
     this.gallonsPerMin = device.gpm;
     this.pressure = device.psi;
-    this.uuid = UUIDGen.generate(this.deviceid);
+    this.uuid = UUIDGen.generate(this.deviceid + "-" + this.switchType);
     this.flo = flo;
     this.flo.on(device.deviceid, this.refreshState.bind(this));
     this.IsValveControlEnabled = config.enableValveControl ? config.enableValveControl : false;  
