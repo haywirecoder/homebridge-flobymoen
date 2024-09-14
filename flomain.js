@@ -194,6 +194,7 @@ class FlobyMoen extends EventEmitter {
         
         try {
             // Get devices at location 
+            this.log.debug("discoverDevices:  " + url + discoverHeader);
             const loc_response = await axios.get(url, discoverHeader);
             var locations_info = loc_response; 
             // Get each device at each location
@@ -306,6 +307,7 @@ class FlobyMoen extends EventEmitter {
         // Change monitor mode based on request
         var response;
         try {
+            this.log.debug("setSystemMode:  " + url + modeRequestbody);
             response = await axios.post(url, modeRequestbody, this.auth_token.header);
             this.log.info("Flo System Mode: System Monitoring mode change to : " , mode);
             this.log.debug(response);
@@ -337,12 +339,14 @@ class FlobyMoen extends EventEmitter {
         // Change value state
         var response;
         try {
+            this.log.debug("SetValue:  " + url + modeRequestbody);
             response = await axios.post(url, modeRequestbody, this.auth_token.header);
             this.log.info("Flo Valve Now: " , mode);
             this.log.debug(response);
 
         } catch(err) {
             this.log.error("Error: " + err.message);
+            this.isBusy = false;
         }
         this.isBusy = false;
        
@@ -358,6 +362,8 @@ class FlobyMoen extends EventEmitter {
         // Run health check based on user request 
         var response;
         try {
+
+            this.log.debug("runHealthCheck:  " + url);
             this.log.info("Flo Health: Running Health Check. This will take up to 4 mins.");
             response = await axios.post(url,"", this.auth_token.header);
             this.log.debug(response);
@@ -448,6 +454,7 @@ class FlobyMoen extends EventEmitter {
                
         try {
 
+            this.log.debug("refreshDevice:  " + url + refreshHeader);
             var device_info = await axios.get(url, refreshHeader);
             
             // Has the object been updated? If the device has not been heard from, no change is needed
@@ -541,7 +548,7 @@ class FlobyMoen extends EventEmitter {
                     {
                         this.log.warn(`Flo Device ${this.flo_devices[deviceIndex].name} failed to update ${this.flo_devices[deviceIndex].errorCount} times.`);
                     }
-                    this.log.debug("Max failed attemp not reach: ", this.flo_devices[deviceIndex].name, "number of errors: ", this.flo_devices[deviceIndex].errorCount );
+                    this.log.debug("Max failed attempt not reach: ", this.flo_devices[deviceIndex].name, "number of errors: ", this.flo_devices[deviceIndex].errorCount );
                 }
                 else
                     this.log.error("Flo Device Refresh Error:  " + err.message + " " + this.flo_devices[deviceIndex].name);
