@@ -3,12 +3,14 @@ const HealthTestRunTime = 240000;
 const FLO_VALVE_OPEN = 'open';
 const FLO_VALVE_CLOSE = 'closed';
 
+
 class FloOptionSwitch { 
-    constructor(flo, device, log, config, Service, Characteristic, UUIDGen) {
+    constructor(flo, device, log, config, Service, Characteristic, UUIDGen, deviceIndex) {
     this.Characteristic = Characteristic;
     this.Service = Service;
     this.model = device.deviceModel;
     this.name = device.name;
+    this.deviceIndex = deviceIndex;
     this.serialNumber = device.serialNumber;
     this.log = log;
     this.switchType = config.switchType;
@@ -30,9 +32,10 @@ class FloOptionSwitch {
   refreshState(eventData)
   {
     this.log.debug(`Switch updated requested: ` , eventData);
-    this.valveStatus = eventData.device.valveCurrentState;
+    this.valveStatus = eventData.device.valveGlobalState;
     this.gallonsPerMin = eventData.device.gpm;
     this.pressure = eventData.device.psi;
+
   }
  
   setAccessory(accessory) {
@@ -109,19 +112,23 @@ class FloOptionSwitch {
     return callback(null, currentValve);
   }
 
-  async setAuxSwitch(value,callback) {
+  async setAuxSwitch(value,callback) { 
+    var switchService = this.accessory.getService(this.Service.Switch);
     if (this.IsValveControlEnabled) {
-      if (this.value) {
-        this.flo.setValve(this.deviceid , FLO_VALVE_OPEN)
+      if (value) {
+        await this.flo.setValve(this.deviceid , FLO_VALVE_OPEN, this.deviceIndex)
+        this.valveStatus = FLO_VALVE_OPEN;
       }
       else {
-        this.flo.setValve(this.deviceid , FLO_VALVE_CLOSE)
+        await this.flo.setValve(this.deviceid , FLO_VALVE_CLOSE, this.deviceIndex)
+        this.valveStatus = FLO_VALVE_CLOSE;
+      
       }
+     // setTimeout(function () {this.flo.refreshDevice(this.deviceIndex)}.bind(this),30000);
     } 
     else {
-      this.log.warn("Smart Water Shutoff: Valve control is disabled in Homebridge.");
+      this.log.warn("Smart Water Shutoff: Valve control is disabled in Homebridge."); 
       // Get the button service and updated switch soon after set function is complete 
-      var switchService = this.accessory.getService(this.Service.Switch);
       var currentValve = this.VALVE_INUSE_STATE[this.valveStatus];
       setTimeout(function () {switchService.updateCharacteristic(this.Characteristic.On,currentValve)}.bind(this),2000);
     }

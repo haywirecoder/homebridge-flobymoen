@@ -5,11 +5,12 @@ const FLO_VALVE_CLOSE = 'closed';
 
 class FloSmartWater {
  
- constructor(flo, device, log, config, Service, Characteristic, UUIDGen) {
+ constructor(flo, device, log, config, Service, Characteristic, UUIDGen, deviceIndex) {
     this.Characteristic = Characteristic;
     this.Service = Service;
     this.log = log;
     this.name = device.name;
+    this.deviceIndex = deviceIndex;
     this.model = device.deviceModel;
     this.serialNumber = device.serialNumber;
     this.location = device.location;
@@ -71,7 +72,7 @@ class FloSmartWater {
   refreshState(eventData)
   {
     this.log.debug(`Device updated requested: ` , eventData);
-    this.valveStatus = eventData.device.valveCurrentState;
+    this.valveStatus = eventData.device.valveGlobalState;
     this.gallonsPerMin = eventData.device.gpm;
     this.isInstalled = eventData.device.isInstalled;
     this.pressure = eventData.device.psi;
@@ -213,15 +214,15 @@ async getValveActive(callback) {
 
 // Handle requests to set the "Active" characteristic
 async setValveActive(homekitState, callback) {
-  this.log.info("Trigger Set Valve Active");
+  this.log.debug("Trigger Set Valve Active");
   if (this.IsValveControlEnabled) {
     if (homekitState == this.Characteristic.Active.ACTIVE) 
     {  
-      this.flo.setValve(this.deviceid , FLO_VALVE_OPEN)
+      this.flo.setValve(this.deviceid , FLO_VALVE_OPEN, this.deviceIndex)
       this.valveStatus = FLO_VALVE_OPEN;
     }
     else {
-      this.flo.setValve(this.deviceid , FLO_VALVE_CLOSE)
+      this.flo.setValve(this.deviceid , FLO_VALVE_CLOSE, this.deviceIndex)
       this.valveStatus = FLO_VALVE_CLOSE;
     }
   } else {
