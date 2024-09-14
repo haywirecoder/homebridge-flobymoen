@@ -165,7 +165,7 @@ class FlobyMoen extends EventEmitter {
         }
         catch(err) {
             // Something went wrong, display message and return negative return code
-            this.log.error("Flo Login Error: " + err.message);
+            this.log.error("Flo login error: " + err.message);
             return false;
         } 
         
@@ -191,10 +191,9 @@ class FlobyMoen extends EventEmitter {
             ...this.auth_token.header,
             ...getHeader
         }
-        
+        this.log.debug("discoverDevices:  " + url + " Discover Object: " + JSON.stringify(discoverHeader));
         try {
             // Get devices at location 
-            this.log.debug("discoverDevices:  " + url + discoverHeader);
             const loc_response = await axios.get(url, discoverHeader);
             var locations_info = loc_response; 
             // Get each device at each location
@@ -245,10 +244,13 @@ class FlobyMoen extends EventEmitter {
                                             device.psi = device_info.data.telemetry.current.psi || 0;;
                                             device.gpm = device_info.data.telemetry.current.gpm || 0;;
                                             device.temperature = (device_info.data.telemetry.current.tempF - 32) * 5 / 9;
-                                            device.systemCurrentState = device_info.data.systemMode.lastKnown;
+                                             // New installation may not has lastknown state, set to target state.
+                                            device.systemCurrentState = device_info.data.systemMode.lastKnown || device_info.data.systemMode.target;
                                             device.systemTargetState = device_info.data.systemMode.target;
-                                            device.valveCurrentState = device_info.data.valve.lastKnown;
-                                            device.valveTargetState = device_info.data.valve.target || device.valveCurrentState;
+                                            // New installation may not has lastknown state, set to target state.
+                                            device.valveCurrentState = device_info.data.valve.lastKnown || device_info.data.valve.target;
+                                            device.valveTargetState = device_info.data.valve.target;
+                                            device.valveGlobalState = device.valveCurrentState;
                                             device.isInstalled = device_info.data.installStatus.isInstalled;
                                             device.isConnected =  device_info.data.installStatus.isConnected;
                                             this.getConsumption(device);
@@ -263,17 +265,17 @@ class FlobyMoen extends EventEmitter {
                                     this.flo_devices.push(device);
                                 }
                                 else
-                                    this.log.error("Flo Device Error: " + device_info.data);
+                                    this.log.error("Flo error devices: " + device_info.data);
                             }
                         } 
                         catch(err) {
-                            this.log.error("Flo Device Error: " + err.message);
+                            this.log.error("Flo error devices: " + err.message);
                         };
                     }
                 }
                 return true;
         } catch(err) {
-            this.log.error("Device Discovery Unsuccessful Error:  " + err.message + ". Please check configuration and restart the plug-in");
+            this.log.error("FLo error device discovery unsuccessful:  " + err.message + ". Please check configuration and restart the plug-in");
             return false;
         }
 
@@ -306,20 +308,20 @@ class FlobyMoen extends EventEmitter {
 
         // Change monitor mode based on request
         var response;
+        this.log.debug("setSystemMode:  " + url + " Request Object: " + JSON.stringify(modeRequestbody));
         try {
-            this.log.debug("setSystemMode:  " + url + modeRequestbody);
             response = await axios.post(url, modeRequestbody, this.auth_token.header);
             this.log.info("Flo System Mode: System Monitoring mode change to : " , mode);
             this.log.debug(response);
         } catch(err)
         {
-            this.log.error("Error: " + err.message);
+            this.log.error("Flo error in setting system mode: " + err.message);
         }
         this.isBusy = false;
        
     };
 
-    async setValve(deviceid, mode) {
+    async setValve(deviceid, mode, deviceIndex) {
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
             await this.refreshToken();
@@ -338,15 +340,19 @@ class FlobyMoen extends EventEmitter {
         };
         // Change value state
         var response;
+        this.log.debug("SetValue:  " + url + " Request Object: " + JSON.stringify(modeRequestbody));
         try {
-            this.log.debug("SetValue:  " + url + modeRequestbody);
             response = await axios.post(url, modeRequestbody, this.auth_token.header);
+            // No error response. Change modes to desire stated and emit changes for smartvalve objects
+            this.flo_devices[deviceIndex].valveGlobalState = mode;
+            this.emit(this.flo_devices[deviceIndex].deviceid, {
+                device: this.flo_devices[deviceIndex]
+            });
             this.log.info("Flo Valve Now: " , mode);
             this.log.debug(response);
 
         } catch(err) {
-            this.log.error("Error: " + err.message);
-            this.isBusy = false;
+            this.log.error("Flo error in setting valve state: " + err.message);
         }
         this.isBusy = false;
        
@@ -361,15 +367,14 @@ class FlobyMoen extends EventEmitter {
 
         // Run health check based on user request 
         var response;
+        this.log.debug("runHealthCheck:  " + url);
         try {
-
-            this.log.debug("runHealthCheck:  " + url);
             this.log.info("Flo Health: Running Health Check. This will take up to 4 mins.");
             response = await axios.post(url,"", this.auth_token.header);
             this.log.debug(response);
         } catch(err)
         {
-           this.log.error("Error: " + err.message);
+           this.log.error("Flo error in running health check: " + err.message);
         }
        
     };
@@ -407,7 +412,7 @@ class FlobyMoen extends EventEmitter {
         // }
         // catch (err)
         // {
-        //     this.log.error("Getting Alerts Error:  " + err.message);
+        //     this.log.error("Flo error getting alerts:  " + err.message);
         // }
     };
 
@@ -419,7 +424,7 @@ class FlobyMoen extends EventEmitter {
         }
         // Get device
         var url = FLO_V2_API_BASE + "/alarms";     
-               
+        this.log.debug("getAlarm:  " + url);
         try {
 
             var alarm_status = await axios.get(url, this.auth_token.header);
@@ -428,8 +433,7 @@ class FlobyMoen extends EventEmitter {
         }
         catch(err) {
             // Something went wrong, display error and return.
-            this.log.error("Flo Getting Alarms Status Error:  " + err.message);
-            return false;
+            this.log.error("Flo error getting alarms status:  " + err.message);
         };
     };
 
@@ -452,11 +456,10 @@ class FlobyMoen extends EventEmitter {
             ...getHeader
         }
                
+        this.log.debug("refreshDevice:  " + url + " Refreash Object: " + JSON.stringify(refreshHeader));
         try {
 
-            this.log.debug("refreshDevice:  " + url + refreshHeader);
-            var device_info = await axios.get(url, refreshHeader);
-            
+            var device_info = await axios.get(url, refreshHeader);            
             // Has the object been updated? If the device has not been heard from, no change is needed
             this.log.debug("Getting Update time ", this.flo_devices[deviceIndex].name);
             
@@ -465,7 +468,6 @@ class FlobyMoen extends EventEmitter {
             this.log.debug("Comparing update time for ", this.flo_devices[deviceIndex].name);
             
             if (deviceUpdateTime.getTime() == this.flo_devices[deviceIndex].lastUpdate.getTime()) {
-                
                 this.log.debug(this.flo_devices[deviceIndex].name, " has no updates.");
                 // polling was successful.
                 this.flo_devices[deviceIndex].errorCount = 0;
@@ -487,7 +489,6 @@ class FlobyMoen extends EventEmitter {
             }
             // Update key information about device
             this.log.debug("Device Updated Data: ", device_info.data);
-
             this.flo_devices[deviceIndex].lastUpdate = new Date(device_info.data.lastHeardFromTime);
             this.flo_devices[deviceIndex].notifications = device_info.data.notifications.pending;
             if(this.flo_devices[deviceIndex].offline == 1) this.log.info(`Device is back online: ${this.flo_devices[deviceIndex].name}`);
@@ -519,11 +520,12 @@ class FlobyMoen extends EventEmitter {
                     this.flo_devices[deviceIndex].systemTargetState = device_info.data.systemMode.target;
 
                     // New installation may not has lastknown state, set to target state.
-                    if (device_info.data.systemMode.lastKnown) 
+                    if (device_info.data.valve.lastKnown) 
                         this.flo_devices[deviceIndex].valveCurrentState = device_info.data.valve.lastKnown;
                     else
                         this.flo_devices[deviceIndex].valveCurrentState = device_info.data.valve.target;
 
+                    this.flo_devices[deviceIndex].valveGlobalState =  this.flo_devices[deviceIndex].valveCurrentState;
                     this.flo_devices[deviceIndex].valveTargetState = device_info.data.valve.target;
                     this.flo_devices[deviceIndex].isInstalled =  device_info.data.installStatus.isInstalled;
                     this.flo_devices[deviceIndex].isConnected =  device_info.data.installStatus.isConnected;
@@ -551,7 +553,7 @@ class FlobyMoen extends EventEmitter {
                     this.log.debug("Max failed attempt not reach: ", this.flo_devices[deviceIndex].name, "number of errors: ", this.flo_devices[deviceIndex].errorCount );
                 }
                 else
-                    this.log.error("Flo Device Refresh Error:  " + err.message + " " + this.flo_devices[deviceIndex].name);
+                    this.log.error("Flo error for device refresh:  " + err.message + " " + this.flo_devices[deviceIndex].name);
                 return false;
         };
     };
@@ -596,10 +598,19 @@ class FlobyMoen extends EventEmitter {
         var endDateFormat = endDate.getFullYear() + "-" + String(endDate.getMonth() + 1).padStart(2, '0') + "-" + String(endDate.getDate()).padStart(2, '0');
         var url = "https://api-gw.meetflo.com/api/v2/water/consumption?startDate=" + startDateFormat + "&endDate=" + endDateFormat + "&locationId=" + location_id + "&interval=1h";
     
-        var response = await axios.get(url, this.auth_token.header);
-        var data = response.data
-        device.sumTotalGallonsConsumed = data.aggregations.sumTotalGallonsConsumed;
-        
+        this.log.debug("getConsumption:  " + url);
+   
+        try
+        {
+            var response = await axios.get(url, this.auth_token.header);
+            var data = response.data
+            device.sumTotalGallonsConsumed = data.aggregations.sumTotalGallonsConsumed;
+                            
+        } 
+        catch(err) {
+
+            this.log.error("Flo error in getting consumption: " + err.message);       
+        }
     }
     // Send a presence ping to Flo, to force device updates.
     async generatePing()
@@ -624,12 +635,13 @@ class FlobyMoen extends EventEmitter {
             ...header
         }
         // Generate presence ping
+        refreshDevice
         try {
             const response = await axios.post(FLO_PRESENCE_HEARTBEAT,"", pingrequest);
             this.log("Presence ping successful.")
         } catch(err)
         {
-            this.log.error("Flo Error: " + err.message);
+            this.log.error("Flo error in generating ping: " + err.message);
             
         }
         this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 

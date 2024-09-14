@@ -97,7 +97,7 @@ class FloByMoenPlatform {
     let currentDevice = this.flo.flo_devices[i];
     switch (currentDevice.type) {
         case FLO_SMARTWATER:
-          var smartWaterAccessory = new smartwater(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
+          var smartWaterAccessory = new smartwater(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen, i);
           // check the accessory was not restored from cache
           var foundAccessory = this.accessories.find(accessory => accessory.UUID === smartWaterAccessory.uuid)
           if (!foundAccessory) {
@@ -112,7 +112,7 @@ class FloByMoenPlatform {
             smartWaterAccessory.setAccessory(foundAccessory);
           if(IsHealthSwitchEnabled) {
               this.config.switchType = "healthswitch";
-              var healthswitch = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
+              var healthswitch = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen, i);
               // check the accessory was not restored from cache
               var foundAccessory = this.accessories.find(accessory => accessory.UUID === healthswitch.uuid)
               if (!foundAccessory) {
@@ -130,7 +130,7 @@ class FloByMoenPlatform {
           }
           if(IsAuxFloSwitchEnabled) {
             this.config.switchType = "auxswitch";
-            var auxfloswitch = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
+            var auxfloswitch = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen, i);
             // check the accessory was not restored from cache
             var foundAccessory = this.accessories.find(accessory => accessory.UUID === auxfloswitch.uuid)
             if (!foundAccessory) {
@@ -149,7 +149,7 @@ class FloByMoenPlatform {
 
           if(IsGpmPSIlux) {
             this.config.switchType = "gpmPSIlux";
-            var gpmPSIluxsensor = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
+            var gpmPSIluxsensor = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen, i);
             // check the accessory was not restored from cache
             var foundAccessory = this.accessories.find(accessory => accessory.UUID === gpmPSIluxsensor.uuid)
             if (!foundAccessory) {
