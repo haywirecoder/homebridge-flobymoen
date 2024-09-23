@@ -635,7 +635,6 @@ class FlobyMoen extends EventEmitter {
             ...header
         }
         // Generate presence ping
-        refreshDevice
         try {
             const response = await axios.post(FLO_PRESENCE_HEARTBEAT,"", pingrequest);
             this.log("Presence ping successful.")

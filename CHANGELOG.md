@@ -1,5 +1,18 @@
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
+ Change Log
+  Change Log
+# v1.0.16 (2024-09-23)
+## Break fixes
+* Correct code fault in Ping function
+
+# v1.0.15 (2024-09-14)
+## Break fixes
+* Additional fixes to auxiliary shutoff switch (#19)
+
 # Change Log
+# v1.0.14 (2024-08-09)
+## Break fixes
+* Fix config file for clearOnNoLead.
 
 # v1.0.13 (2024-07-27)
 ## Break fixes
