@@ -90,7 +90,7 @@ class FloByMoenPlatform {
   // will handle the creation and setting callback for each device types.
   var IsHealthSwitchEnabled = this.config.showHealthTestSwitch ? this.config.showHealthTestSwitch : false;
   var IsAuxFloSwitchEnabled = this.config.showAuxSwitch ? this.config.showAuxSwitch : false;
-  var IsGpmPSIlux =  this.config.showGPMPSIasLight ? config.showGPMPSIasLight : false;
+  var IsGpmPSIlux =  this.config.showGPMPSIasLight ? this.config.showGPMPSIasLight : false;
 
   if (this.flo.flo_devices.length <=0 ) return;
   for (var i = 0; i < this.flo.flo_devices.length; i++) {
