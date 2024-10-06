@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file. This projec
 
 # v1.0.16 (2024-09-23)
 ## Break fixes
-* Correct code fault in Ping function
+* Correct code fault in Ping function (#20)
 
 # v1.0.15 (2024-09-14)
 ## Break fixes
