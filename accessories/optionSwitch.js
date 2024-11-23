@@ -65,16 +65,17 @@ class FloOptionSwitch {
         .on('get', async callback => this.getAuxSwitch(callback))
         .on('set', async (state, callback) => this.setAuxSwitch(state, callback));
       break;
-      case 'gpmPSIlux':
+      case 'pSIlux':
         // Created two light sensors to report GPM and PSI sensor
         var lightSensorPSIService = this.accessory.getService(this.Service.LightSensor,'PSIService');
-        if (lightSensorPSIService == undefined) lightSensorPSIService = this.accessory.addService(this.Service.LightSensor,'PSI','PSIService');  
+        if (lightSensorPSIService == undefined) lightSensorPSIService = this.accessory.addService(this.Service.LightSensor, this.name + ' PSI','PSIService');  
         // create handlers for required characteristics
         lightSensorPSIService.getCharacteristic(this.Characteristic.CurrentAmbientLightLevel)
         .on('get', async callback => this.getCurrentPSI(callback));
-
+      break;
+      case 'gpmlux':
         var lightSensorGPMService = this.accessory.getService(this.Service.LightSensor,'GPMService');
-        if (lightSensorGPMService == undefined) lightSensorGPMService = this.accessory.addService(this.Service.LightSensor,'GPM','GPMService');  
+        if (lightSensorGPMService == undefined) lightSensorGPMService = this.accessory.addService(this.Service.LightSensor, this.name + ' GPM','GPMService');  
         // create handlers for required characteristics
         lightSensorGPMService.getCharacteristic(this.Characteristic.CurrentAmbientLightLevel)
         . on('get', async callback => this.getCurrentGPM(callback));
@@ -143,7 +144,7 @@ async getCurrentPSI(callback) {
 
 //Handle requests to get the current value of the "Current light for GPM" characteristic
 async getCurrentGPM(callback) {
-  // set this to a valid value for CurrentTemperature
+  // set this to a valid value for GPM
   if (this.gallonsPerMin == 0) 
     return callback(null,0.0001);
   else 
