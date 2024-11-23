@@ -47,8 +47,7 @@ class FlobyMoen extends EventEmitter {
         this.auth_token.username = config.auth.username;
         this.auth_token.password = config.auth.password;
         this.maxErrorCount = config.retryErrorDisplay || 3;
-        this.isBusy = false;
-        
+        this.isBusy = false; 
     };
 
     async init() {
@@ -71,8 +70,8 @@ class FlobyMoen extends EventEmitter {
 
         // If token not present or expired obtain new token
         if (!this.isLoggedIn()) {
-                // obtain new token
-                await this.refreshToken();
+            // obtain new token
+            await this.refreshToken();
         }
         else
         {
@@ -92,7 +91,6 @@ class FlobyMoen extends EventEmitter {
 
         }
         return true;
-      
     };
 
     startPollingProcess()
@@ -109,7 +107,6 @@ class FlobyMoen extends EventEmitter {
     {
         // Set time to send ping for cloud service to obtain/update data 
         this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 
-     
     };
 
     isLoggedIn() {
@@ -123,7 +120,6 @@ class FlobyMoen extends EventEmitter {
     async refreshToken() {
 
         this.log.info("Flo Status: Refreshing Token...");
-        
         try {
            
             const response = await axios.post(FLO_AUTH_URL, {
@@ -175,7 +171,6 @@ class FlobyMoen extends EventEmitter {
             }
             return false;
         } 
-        
     };
 
     // Discover and configure  that have been registered for this account. 
@@ -285,7 +280,6 @@ class FlobyMoen extends EventEmitter {
             this.log.error("FLo error device discovery unsuccessful:  " + err.message + ". Please check configuration and restart the plug-in");
             return false;
         }
-
     };
 
     // Change/set Flo system in three mode home, away and sleep. Refer to link below for each mode.
@@ -333,10 +327,10 @@ class FlobyMoen extends EventEmitter {
             
         }
         this.isBusy = false;
-       
     };
 
     async setValve(deviceid, mode, deviceIndex) {
+
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
             await this.refreshToken();
@@ -569,8 +563,7 @@ class FlobyMoen extends EventEmitter {
             this.emit(this.flo_devices[deviceIndex].deviceid, {
                 device: this.flo_devices[deviceIndex]
             });
-            return true;
-                            
+            return true;               
         } 
         catch(err) {
                 // At times the plug-in reports a 502 error. This is a communication error with the Flo server,
@@ -593,7 +586,6 @@ class FlobyMoen extends EventEmitter {
     async backgroundRefresh() {
 
          // clear device timer and begin refreshing device data
-       
          if (this.deviceRefreshHandle) 
          {
              clearTimeout(this.deviceRefreshHandle);
@@ -616,11 +608,10 @@ class FlobyMoen extends EventEmitter {
        
         // Set timer to refresh devices
        this.deviceRefreshHandle = setTimeout(() => this.backgroundRefresh(), this.deviceRefreshTime); 
-       
-
     };
    
     async getConsumption(device) {
+
         var location_id = device.location;
         var startDate = new Date();
         var endDate = new Date();
@@ -644,6 +635,10 @@ class FlobyMoen extends EventEmitter {
             this.log.error("Flo error in getting consumption: " + err.message);       
         }
     }
+
+    // *******************************************************
+    // Not currently used
+    // *******************************************************
     // Send a presence ping to Flo, to force device updates.
     async generatePing()
     {

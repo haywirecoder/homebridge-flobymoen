@@ -90,7 +90,9 @@ class FloByMoenPlatform {
   // will handle the creation and setting callback for each device types.
   var IsHealthSwitchEnabled = this.config.showHealthTestSwitch ? this.config.showHealthTestSwitch : false;
   var IsAuxFloSwitchEnabled = this.config.showAuxSwitch ? this.config.showAuxSwitch : false;
-  var IsGpmPSIlux =  this.config.showGPMPSIasLight ? this.config.showGPMPSIasLight : false;
+  var IsGpmlux =  this.config.showGPMPSIasLight ? this.config.showGPMPSIasLight : false;
+  var IsPSIlux =  this.config.showGPMPSIasLight ? this.config.showGPMPSIasLight : false;
+  var lwatersensor = 0;
 
   if (this.flo.flo_devices.length <=0 ) return;
   for (var i = 0; i < this.flo.flo_devices.length; i++) {
@@ -110,6 +112,7 @@ class FloByMoenPlatform {
           }
           else // accessory already exist just set characteristic
             smartWaterAccessory.setAccessory(foundAccessory);
+         
           if(IsHealthSwitchEnabled) {
               this.config.switchType = "healthswitch";
               var healthswitch = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen, i);
@@ -127,6 +130,7 @@ class FloByMoenPlatform {
                 healthswitch.setAccessory(foundAccessory);
               // This a accessories not base on flo device list, track it in another list for future use.
               this.optionalAccessories.push(healthswitch);
+              this.log.info(`Heath Switch Enabled for ${currentDevice.name}`);
           }
           if(IsAuxFloSwitchEnabled) {
             this.config.switchType = "auxswitch";
@@ -145,28 +149,50 @@ class FloByMoenPlatform {
               auxfloswitch.setAccessory(foundAccessory);
             // This a accessories not base on flo device list, track it in another list for future use.
             this.optionalAccessories.push(auxfloswitch);
+            this.log.info(`Water Shutoff Auxiliary Switch Enabled for ${currentDevice.name}`);
           }
 
-          if(IsGpmPSIlux) {
-            this.config.switchType = "gpmPSIlux";
-            var gpmPSIluxsensor = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen, i);
+          if(IsPSIlux) {
+            this.config.switchType = "pSIlux";
+            var pSIluxsensor = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen, i);
             // check the accessory was not restored from cache
-            var foundAccessory = this.accessories.find(accessory => accessory.UUID === gpmPSIluxsensor.uuid)
+            var foundAccessory = this.accessories.find(accessory => accessory.UUID === pSIluxsensor.uuid)
             if (!foundAccessory) {
               // create a new accessory
-              let newAccessory = new this.api.platformAccessory(currentDevice.name + " Sensors", gpmPSIluxsensor.uuid);
+              let newAccessory = new this.api.platformAccessory(currentDevice.name + " PSI Sensors", pSIluxsensor.uuid);
               // add services and Characteristic
-              gpmPSIluxsensor.setAccessory(newAccessory);
+              pSIluxsensor.setAccessory(newAccessory);
               // register the accessory
-              this.addAccessory(gpmPSIluxsensor);
+              this.addAccessory(pSIluxsensor);
             }
             else // accessory already exist just set characteristic
-              gpmPSIluxsensor.setAccessory(foundAccessory);
+              pSIluxsensor.setAccessory(foundAccessory);
             // This a accessories not base on flo device list, track it in another list for future use.
-            this.optionalAccessories.push(gpmPSIluxsensor);
+            this.optionalAccessories.push(pSIluxsensor);
           }
-      break;
-        break; 
+          if(IsGpmlux) {
+            this.config.switchType = "gpmlux";
+            var gpmluxsensor = new optionswitch(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen, i);
+            // check the accessory was not restored from cache
+            var foundAccessory = this.accessories.find(accessory => accessory.UUID === gpmluxsensor.uuid)
+            if (!foundAccessory) {
+              // create a new accessory
+              let newAccessory = new this.api.platformAccessory(currentDevice.name + " GPM Sensors", gpmluxsensor.uuid);
+              // add services and Characteristic
+              gpmluxsensor.setAccessory(newAccessory);
+              // register the accessory
+              this.addAccessory(gpmluxsensor);
+            }
+            else // accessory already exist just set characteristic
+              gpmluxsensor.setAccessory(foundAccessory);
+            // This a accessories not base on flo device list, track it in another list for future use.
+            this.optionalAccessories.push(gpmluxsensor);
+          }
+          if(IsPSIlux || IsGpmlux) 
+            this.log.info(`${currentDevice.name} water valve configured. Monitoring Lux senssors are Eneabled and Homebridge control is ${this.config.enableValveControl ? 'Enabled' : 'Disabled'}`);
+          else
+            this.log.info(`${currentDevice.name} water valve configured. Homebridge control is ${this.config.enableValveControl ? 'Enabled' : 'Disabled'}`);
+         break; 
         
         case FLO_WATERSENSOR: 
           var waterAccessory = new watersensor(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen);
@@ -182,9 +208,11 @@ class FloByMoenPlatform {
           }
           else // accessory already exist just set characteristic
             waterAccessory.setAccessory(foundAccessory);
+            lwatersensor = lwatersensor + 1;
         break;
        }
     }
+    if(lwatersensor > 0) this.log.info(`${lwatersensor} Water sensor(s) discovered and configured.`);
     // Clean accessories with no association with Flo devices.
     this.orphanAccessory();
   
@@ -208,7 +236,7 @@ class FloByMoenPlatform {
 
   //Remove accessory to homekit dashboard
   removeAccessory(accessory, updateIndex) {
-      this.log.warn('Flo load Removing accessory:',accessory.displayName );
+      this.log.warn('Removing Flo accessory:',accessory.displayName );
       if (accessory) {
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
@@ -232,7 +260,7 @@ class FloByMoenPlatform {
         // determine if an optional components, thus should remain
         foundAccessory = this.optionalAccessories.find(optionalAccessory => optionalAccessory.uuid === accessory.UUID);
         if (!foundAccessory) {
-            this.removeAccessory(accessory,true);
+            this.removeAccessory(accessory,false);
         }
       }
     }
