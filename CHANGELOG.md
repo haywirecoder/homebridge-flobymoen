@@ -1,5 +1,13 @@
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
 # Change Log
+# v1.0.18 (2024-10-23)
+## Break fixes
+* Enabling GPM/PSI causes a crash loop (#24)
+* Health switch does not function as expected (#23)
+
+### Enhancements
+* More detailed error logging
+* Dependency updates
 
 # v1.0.17 (2024-10-06)
 ## Break fixes

@@ -389,7 +389,7 @@ class FlobyMoen extends EventEmitter {
 
         this.log.debug("runHealthCheck URL:  " + url);
         try {
-            this.log.info("Flo Health: Running Health Check. This will take up to 4 mins.");
+            this.log.info("Flo Health: Running Health Check. This will take 4 minutes to complete.");
             response = await axios.post(url, runHealthRequestbody, this.auth_token.header);
             this.log.debug(response);
         } catch(err)
