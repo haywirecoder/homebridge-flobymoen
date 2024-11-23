@@ -31,7 +31,6 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 | treatWarningAsCritical         | By default Flo warnings are treated as alarm faults. Set this value to <i>true</i> to escalated Flo warnings to critical resulting in a Homekit alarm trigger event. |
 | showAuxSwitch         | Display an auxiliary water on/off switch. This is useful in Apple's Home application. Other Homekit applications such as Eve expose the Flo valve for automation. Default to <i>false</i>, this is an optional value.|
 | offlineTimeLimit         | Battery device periodically send data to the Flo servers. This value determine how long before plug-in indicates the device is offline and a general fault is generated. Defaults to <i>4</i> hours.|
-| pingRefresh         | Set value to force a refresh of Flo Cloud service. Should be used if device updates are not occurring for an extended period of time.  |
 | excludedDevices         | Using the device serial number to suppress from HomeKit. This is an optional value. | |
 
 
