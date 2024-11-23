@@ -165,7 +165,14 @@ class FlobyMoen extends EventEmitter {
         }
         catch(err) {
             // Something went wrong, display message and return negative return code
-            this.log.error("Flo login error: " + err.message);
+            if (err.response) {
+                this.log.error('Flo login error: Server responded with status code:', err.response.status);
+                this.log.error('Response data:', err.response.data);
+              } else if (err.request) {
+                this.log.error('Flo login error: No response received:', err.request);
+              } else {
+                this.log.error('Flo login error: Error creating request:', err.message);
+            }
             return false;
         } 
         
@@ -315,7 +322,15 @@ class FlobyMoen extends EventEmitter {
             this.log.debug(response);
         } catch(err)
         {
-            this.log.error("Flo error in setting system mode: " + err.message);
+            if (err.response) {
+                this.log.error('Flo system Mode: Server responded with status code:', err.response.status);
+                this.log.error('Response data:', err.response.data);
+              } else if (err.request) {
+                this.log.error('Flo system Mode: No response received:', err.request);
+              } else {
+                this.log.error('Flo system Mode: Error creating request:', err.message);
+            }
+            
         }
         this.isBusy = false;
        
@@ -352,7 +367,15 @@ class FlobyMoen extends EventEmitter {
             this.log.debug(response);
 
         } catch(err) {
-            this.log.error("Flo error in setting valve state: " + err.message);
+
+            if (err.response) {
+                this.log.error('Flo Valve: Server responded with status code:', err.response.status);
+                this.log.error('Response data:', err.response.data);
+              } else if (err.request) {
+                this.log.error('Flo Valve: No response received:', err.request);
+              } else {
+                this.log.error('Flo Valve: Error creating request:', err.message);
+            }
         }
         this.isBusy = false;
        
@@ -367,16 +390,25 @@ class FlobyMoen extends EventEmitter {
 
         // Run health check based on user request 
         var response;
-        this.log.debug("runHealthCheck:  " + url);
+        var runHealthRequestbody = {
+        };
+
+        this.log.debug("runHealthCheck URL:  " + url);
         try {
             this.log.info("Flo Health: Running Health Check. This will take up to 4 mins.");
-            response = await axios.post(url,"", this.auth_token.header);
+            response = await axios.post(url, runHealthRequestbody, this.auth_token.header);
             this.log.debug(response);
         } catch(err)
         {
-           this.log.error("Flo error in running health check: " + err.message);
+            if (err.response) {
+                this.log.error('Flo health: Server responded with status code:', err.response.status);
+                this.log.error('Response data:', err.response.data);
+              } else if (err.request) {
+                this.log.error('Flo health: No response received:', err.request);
+              } else {
+                this.log.error('Flo health: Error creating request:', err.message);
+            }
         }
-       
     };
 
     // *******************************************************
@@ -630,17 +662,20 @@ class FlobyMoen extends EventEmitter {
             'Referer': 'https://user.meetflo.com/',
             'Accept-Language': 'en-US,en;q=0.9,es;q=0.8'
         }
-        var pingrequest = {
-            ...this.auth_token.header,
-            ...header
-        }
         // Generate presence ping
         try {
-            const response = await axios.post(FLO_PRESENCE_HEARTBEAT,"", pingrequest);
+            const response = await axios.post(FLO_PRESENCE_HEARTBEAT,header, this.auth_token.header);
             this.log("Presence ping successful.");
         } catch(err)
         {
-            this.log.error("Flo error in generating ping: " + err.message);
+            if (err.response) {
+                this.log.error('Flo ping error: Server responded with status code:', err.response.status);
+                this.log.error('Response data:', err.response.data);
+              } else if (err.request) {
+                this.log.error('Flo ping error: No response received:', err.request);
+              } else {
+                this.log.error('Flo ping error: Error creating request:', err.message);
+            }
             
         }
         this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 
