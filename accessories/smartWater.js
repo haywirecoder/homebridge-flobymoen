@@ -16,9 +16,7 @@ class FloSmartWater {
     this.location = device.location;
     this.version = device.version;
     this.isInstalled = device.isInstalled;
-    this.currentTemperature = device.temperature || -180;
 
-    this.isFloTemperature = config.showFloTemperature ? config.showFloTemperature : true;
     this.deviceid = device.deviceid.toString();
     this.uuid = UUIDGen.generate(this.deviceid);
 
@@ -76,7 +74,6 @@ class FloSmartWater {
     this.gallonsPerMin = eventData.device.gpm;
     this.isInstalled = eventData.device.isInstalled;
     this.pressure = eventData.device.psi;
-    this.currentTemperature = eventData.device.temperature.toFixed(2) || -180;
 
     // get security system
     const securityService = this.accessory.getService(this.Service.SecuritySystem);
@@ -166,22 +163,14 @@ class FloSmartWater {
         .on('get', async callback => this.getValveInUse(callback));
     valveService.setCharacteristic(this.Characteristic.StatusFault, this.systemFault);
     valveService.setCharacteristic(this.Characteristic.IsConfigured,this.VALVE_CONFIGURED_STATE[this.isInstalled]);
-
+    
+  // water temp was deprecated by FLO. If control exist removed it.
+    // Remove service if already created in cache accessory
     var temperatureService;
-    if (this.isFloTemperature)
-    {
-      // Add temperature sensor
-      temperatureService = this.accessory.getService(this.Service.TemperatureSensor);
-      if (temperatureService == undefined) temperatureService = this.accessory.addService(this.Service.TemperatureSensor);  
-      // create handlers for required characteristics
-      temperatureService.getCharacteristic(this.Characteristic.CurrentTemperature)
-          .on('get', async callback => this.getCurrentTemperature(callback));
-    }
-    else {
-      // Remove service if already created in cache accessory
-      temperatureService = this.accessory.getService(this.Service.TemperatureSensor);
-      if (temperatureService!= undefined) this.accessory.removeService(temperatureService);
-    }
+  
+    temperatureService = this.accessory.getService(this.Service.TemperatureSensor);
+    if (temperatureService!= undefined) this.accessory.removeService(temperatureService);
+    
   }
 
 
@@ -242,11 +231,6 @@ async getValveInUse(callback) {
   return callback(null, currentValue);
 }
 
-//Handle requests to get the current value of the "Current temperature" characteristic
-async getCurrentTemperature(callback) {
-    // set this to a valid value for CurrentTemperature
-    return callback(null,this.currentTemperature);
-  }
 }
 
 
