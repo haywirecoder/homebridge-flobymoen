@@ -243,9 +243,8 @@ class FlobyMoen extends EventEmitter {
                                             device.batterylevel = device_info.data.battery.level;
                                             break;
                                         case FLO_SMARTWATER:
-                                            device.psi = device_info.data.telemetry.current.psi || 0;;
-                                            device.gpm = device_info.data.telemetry.current.gpm || 0;;
-                                            device.temperature = (device_info.data.telemetry.current.tempF - 32) * 5 / 9;
+                                            device.psi = device_info.data.telemetry.current.psi || 0;
+                                            device.gpm = device_info.data.telemetry.current.gpm || 0;
                                              // New installation may not has lastknown state, set to target state.
                                             device.systemCurrentState = device_info.data.systemMode.lastKnown || device_info.data.systemMode.target;
                                             device.systemTargetState = device_info.data.systemMode.target;
@@ -535,7 +534,6 @@ class FlobyMoen extends EventEmitter {
                 case FLO_SMARTWATER:
                     this.flo_devices[deviceIndex].psi = device_info.data.telemetry.current.psi || 0;
                     this.flo_devices[deviceIndex].gpm = device_info.data.telemetry.current.gpm || 0;
-                    this.flo_devices[deviceIndex].temperature = (device_info.data.telemetry.current.tempF - 32) / 1.8;
 
                     // New installation may not has lastknown state, set to target state.
                     if (device_info.data.systemMode.lastKnown) 
