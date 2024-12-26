@@ -84,13 +84,6 @@
         "minimum": 15,
         "maximum": 3600
       },
-        "pingRefresh": {
-        "title": "Periodically Force Refresh",
-        "type": "integer",
-        "description": "Force a cloud refresh of devices at a regular interval. This option should only be used if devices do not seems to updates for multiple hours.",
-        "minimum": 1,
-        "maximum": 24
-      },
         "offlineTimeLimit": {
         "title": "Offline Time Limit (hours)",
         "type": "integer",
@@ -138,11 +131,6 @@
         "description": "At times the plug-in reports a 502 error. This is a communication error with the Flo server. An occasional error will not effect operations but can fill up log. This value define number of consecutive failure before logging.",
         "minimum": 3
       },
-      "showFloTemperature": {
-        "title": "Show the temperature of Flo value.",
-        "type": "boolean",
-        "default": true
-      },
       "showGPMPSIasLight": {
         "title": "Show the current Gallons Per Minute (GPM) and Water Pressure (PSI) value as lux sensors.",
         "type": "boolean",
@@ -170,7 +158,6 @@
       "expandable": true,
       "title": "Advanced Options",
       "items": [
-        "showFloTemperature",
         "showGPMPSIasLight",
         "treatWarningAsCritical",
         "clearOnNoLeak",
