@@ -35,48 +35,48 @@
           }
         }
       },
-        "disableCache": {
+      "disableCache": {
         "title": "Disable Caching of Flo Token",
         "type": "boolean",
         "default": false
       },
-        "showTemperatureAndHumidity": {
+      "showTemperatureAndHumidity": {
         "title": "Show Water Sensor Temperature and Humidity in HomeKit",
         "type": "boolean",
         "default": true,
         "description": "Display Water Sensor(s) area temperature and humidity in HomeKit."
       },
-        "enableValveControl": {
+      "enableValveControl": {
         "title": "Enable Valve Control in HomeKit",
         "type": "boolean",
         "default": false,
         "description": "Enable or disable Smart Water Shutoff within HomeKit."
       },
-        "showHealthTestSwitch": {
+      "showHealthTestSwitch": {
         "title": "Run Health Test from HomeKit",
         "type": "boolean",
         "default": false,
         "description": "Display a Health Test switch button to start a manual Health Test in Flo."
       },
-        "showAuxSwitch": {
+      "showAuxSwitch": {
         "title": "Create additional switch for turning on/off the water valve",
         "type": "boolean",
-        "default": false,
+        "default": "false",
         "description": "Display an auxiliary water on/off switch. This is useful in Apple's Home application, other Homekit applications such as Eve exposes the Flo valve for automation."
       },
-        "treatWarningAsCritical": {
+      "treatWarningAsCritical": {
         "title": "Treat Warning as Critical Events",
         "type": "boolean",
         "default": false,
         "description": "This option allows <i>Warning</i> to be treated as <i>Critical</i> events thus trigging the alarm."
       },
-       "clearOnNoLeak": {
+      "clearOnNoLeak": {
         "title": "Auto Clear Leak Detection",
         "type": "boolean",
         "default": false,
         "description": "By default the leak event remain active until it is clear within the flo system, this option allows the plug-in to auto clear when water is no longer detected."
       },
-        "deviceRefresh": {
+      "deviceRefresh": {
         "title": "Device Refresh Interval (seconds)",
         "type": "integer",
         "default": 90,
@@ -84,38 +84,33 @@
         "minimum": 15,
         "maximum": 3600
       },
-        "offlineTimeLimit": {
+      "offlineTimeLimit": {
         "title": "Offline Time Limit (hours)",
         "type": "integer",
-        "description": "Number of house with no refresh before considering device offline.",
+        "description": "Number of hours with no refresh before considering device offline.",
         "default": 4,
         "minimum": 2,
         "maximum": 24
       },
-        "sleepRevertMinutes": {
+      "sleepRevertMinutes": {
         "title": "Sleep Time",
         "type": "integer",
         "default": 120,
         "description": "Sleep Mode is a system mode that quiets all monitoring and alerting, effectively putting the Flo System to sleep. This value represents the length of time to place the system in sleep mode.",
-        "oneOf": [{
-          "title": "2 Hours",
-          "enum": [
-            120
-          ]
-        },
-        {
-          "title": "24 Hours",
-          "enum": [
-           1440
-          ]
-        },
-        {
-          "title": "72 Hours",
-          "enum": [
-            4320
-          ]
-        }
-        ] 
+        "oneOf": [
+          {
+            "title": "2 Hours",
+            "enum": [120]
+          },
+          {
+            "title": "24 Hours",
+            "enum": [1440]
+          },
+          {
+            "title": "72 Hours",
+            "enum": [4320]
+          }
+        ]
       },
       "excludedDevices": {
         "type": "array",
@@ -135,10 +130,17 @@
         "title": "Show the current Gallons Per Minute (GPM) and Water Pressure (PSI) value as lux sensors.",
         "type": "boolean",
         "default": false
+      },
+      "enableSecuritySystem": {
+        "title": "Enable Security System Accessory",
+        "type": "boolean",
+        "default": true,
+        "description": "Enable or disable the security system accessory in HomeKit."
       }
     }
   },
-  "layout": [{
+  "layout": [
+    {
       "type": "fieldset",
       "items": [
         "name",
@@ -150,7 +152,8 @@
         "showHealthTestSwitch",
         "enableValveControl",
         "showAuxSwitch",
-        "offlineTimeLimit"
+        "offlineTimeLimit",
+        "enableSecuritySystem"
       ]
     },
     {
@@ -164,7 +167,6 @@
         {
           "key": "disableCache",
           "description": "Disabled the storage of Flo access token to local Homebridge server. Refresh token at start-up."
-
         },
         {
           "key": "excludedDevices",
@@ -175,9 +177,7 @@
           "items": [
             {
               "type": "fieldset",
-              "items": [
-                "excludedDevices[]"
-              ]
+              "items": ["excludedDevices[]"]
             }
           ]
         },
