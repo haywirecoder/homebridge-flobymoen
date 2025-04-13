@@ -82,7 +82,7 @@ class FloSmartWater {
     this.isInstalled = eventData.device.isInstalled;
     this.pressure = eventData.device.psi;
 
-    // Get services
+    // Get valve service
     const valveService = this.accessory.getService(this.Service.Valve);
 
     // Update valve state
@@ -96,7 +96,6 @@ class FloSmartWater {
         if (eventData.device.notifications.criticalCount > 0) {
           this.systemCurrentState = 'alarm';
         } else {
-          // Current state does not provide correct state, using TargetState
           this.systemCurrentState = eventData.device.systemCurrentState;
           this.systemTargetState = eventData.device.systemTargetState;
         }
@@ -117,7 +116,7 @@ class FloSmartWater {
           this.systemFault = this.Characteristic.StatusFault.NO_FAULT;
         }
 
-        // Update mode state
+        // Update security system state
         securityService.updateCharacteristic(
           this.Characteristic.SecuritySystemCurrentState,
           this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]
@@ -143,6 +142,28 @@ class FloSmartWater {
       .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber)
       .setCharacteristic(this.Characteristic.FirmwareRevision, this.version);
 
+    // Valve Service
+    let valveService = this.accessory.getService(this.Service.Valve);
+    if (!valveService) {
+      valveService = this.accessory.addService(this.Service.Valve, this.name + ' Valve');
+    }
+    valveService.setCharacteristic(this.Characteristic.Name, this.name + ' Valve');
+    valveService.setCharacteristic(this.Characteristic.ValveType, 0);
+    valveService.setCharacteristic(this.Characteristic.SetDuration, 0);
+    valveService.setCharacteristic(this.Characteristic.RemainingDuration, 0);
+    valveService
+      .getCharacteristic(this.Characteristic.Active)
+      .on('get', async callback => this.getValveActive(callback))
+      .on('set', async (state, callback) => this.setValveActive(state, callback));
+    valveService
+      .getCharacteristic(this.Characteristic.InUse)
+      .on('get', async callback => this.getValveInUse(callback));
+    valveService.setCharacteristic(this.Characteristic.StatusFault, this.systemFault);
+    valveService.setCharacteristic(
+      this.Characteristic.IsConfigured,
+      this.VALVE_CONFIGURED_STATE[this.isInstalled]
+    );
+
     // Security System Service (conditional)
     if (this.enableSecuritySystem) {
       let securityService = this.accessory.getService(this.Service.SecuritySystem);
@@ -163,42 +184,26 @@ class FloSmartWater {
         this.Characteristic.StatusTampered,
         this.Characteristic.StatusTampered.NOT_TAMPERED
       );
+    } else {
+      // Remove SecuritySystem service if it exists (handles cached accessories)
+      let securityService = this.accessory.getService(this.Service.SecuritySystem);
+      if (securityService) {
+        this.accessory.removeService(securityService);
+        this.log.info(`Removed SecuritySystem service for ${this.name} as enableSecuritySystem is false`);
+      }
     }
 
-    // Create a new Valve service
-    let valveService = this.accessory.getService(this.Service.Valve);
-    if (!valveService) {
-      valveService = this.accessory.addService(this.Service.Valve, this.name + ' Valve');
-    }
-    // Create handlers for required characteristics
-    valveService.setCharacteristic(this.Characteristic.Name, this.name + ' Valve');
-    valveService.setCharacteristic(this.Characteristic.ValveType, 0);
-
-    valveService.setCharacteristic(this.Characteristic.SetDuration, 0);
-    valveService.setCharacteristic(this.Characteristic.RemainingDuration, 0);
-    valveService
-      .getCharacteristic(this.Characteristic.Active)
-      .on('get', async callback => this.getValveActive(callback))
-      .on('set', async (state, callback) => this.setValveActive(state, callback));
-    valveService
-      .getCharacteristic(this.Characteristic.InUse)
-      .on('get', async callback => this.getValveInUse(callback));
-    valveService.setCharacteristic(this.Characteristic.StatusFault, this.systemFault);
-    valveService.setCharacteristic(
-      this.Characteristic.IsConfigured,
-      this.VALVE_CONFIGURED_STATE[this.isInstalled]
-    );
-
-    // Water temp was deprecated by FLO. If control exists, remove it.
+    // Remove deprecated TemperatureSensor service
     let temperatureService = this.accessory.getService(this.Service.TemperatureSensor);
     if (temperatureService) {
       this.accessory.removeService(temperatureService);
     }
   }
 
-  // Handle requests to get the alarm states. Return index of alarm state
+  // Handle requests to get the alarm states
   async getCurrentState(callback) {
     if (!this.enableSecuritySystem) {
+      this.log.debug('Security system is disabled, ignoring getCurrentState');
       return callback(new Error('Security system is disabled'));
     }
     var currentValue = this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState];
@@ -207,15 +212,16 @@ class FloSmartWater {
 
   async getTargetState(callback) {
     if (!this.enableSecuritySystem) {
+      this.log.debug('Security system is disabled, ignoring getTargetState');
       return callback(new Error('Security system is disabled'));
     }
     var currentValue = this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState];
     return callback(null, currentValue);
   }
 
-  // Change smart water shutoff monitoring state.
   async setTargetState(homekitState, callback) {
     if (!this.enableSecuritySystem) {
+      this.log.debug('Security system is disabled, ignoring setTargetState');
       return callback(new Error('Security system is disabled'));
     }
     this.flo.setSystemMode(this.location, this.TARGET_HOMEKIT_TO_FLO[homekitState], this.systemCurrentState);
