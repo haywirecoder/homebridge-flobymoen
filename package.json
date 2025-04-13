@@ -1,6 +1,6 @@
 {
   "name": "homebridge-flobymoen",
-  "displayName": "Homebridge Flo by Moen",
+  "displayName": "Homebridge Flo by Moen - security enable/disable",
   "version": "1.0.0",
   "description": "A Homebridge plugin for the Flo by Moen system",
   "main": "index.js",
