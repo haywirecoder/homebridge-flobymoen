@@ -16,6 +16,7 @@ class FloSmartWater {
     this.location = device.location;
     this.version = device.version;
     this.isInstalled = device.isInstalled;
+    
 
     this.deviceid = device.deviceid.toString();
     this.uuid = UUIDGen.generate(this.deviceid);
@@ -59,6 +60,7 @@ class FloSmartWater {
     this.systemTampered = Characteristic.StatusTampered.NOT_TAMPERED;
     this.IsWarningAsCritical = config.treatWarningAsCritical ? config.treatWarningAsCritical : false;  
     this.IsValveControlEnabled = config.enableValveControl ? config.enableValveControl : false;  
+    this.securityControlOption = config.securityControlOption || 0;
     this.systemCurrentState = device.systemCurrentState;
     this.systemTargetState = device.systemTargetState;
     this.valveStatus = device.valveCurrentState;
@@ -79,7 +81,7 @@ class FloSmartWater {
     const securityService = this.accessory.getService(this.Service.SecuritySystem);
     const valveService = this.accessory.getService(this.Service.Valve);
 
-    if(eventData.device.notifications.criticalCount > 0) {
+    if((eventData.device.notifications.criticalCount > 0) && (this.securityControlOption == 0)) {
       this.systemCurrentState = 'alarm';
     } else {
       // Current state does not provide correct state, using TargetState
@@ -88,7 +90,7 @@ class FloSmartWater {
     }
 
     // Treat warning as critical
-    if ((eventData.device.notifications.warningCount > 0) || (eventData.device.warningCount > 0)) {
+    if (((eventData.device.notifications.warningCount > 0) || (eventData.device.warningCount > 0)) && (this.securityControlOption == 0)) {
         // Check option if warning should be escalated to alarms
         if (this.IsWarningAsCritical)
         {
@@ -108,14 +110,11 @@ class FloSmartWater {
       this.systemFault = this.Characteristic.StatusFault.NO_FAULT;
     }  
 
-  
     // Update valve state
     valveService.updateCharacteristic(this.Characteristic.Active,this.VALVE_ACTIVE_STATE[this.valveStatus]);
     valveService.updateCharacteristic(this.Characteristic.InUse,this.VALVE_INUSE_STATE[this.valveStatus]);
 
-    //valveService.updateCharacteristic(this.Characteristic.IsConfigured,this.VALVE_CONFIGURED_STATE[this.isInstalled]);
-   
-    // Update mode state
+     // Update mode state
     securityService.updateCharacteristic(this.Characteristic.SecuritySystemCurrentState, this.CURRENT_FLO_TO_HOMEKIT[this.systemCurrentState]);
     if(this.systemCurrentState != 'alarm') {
       securityService.updateCharacteristic(this.Characteristic.SecuritySystemTargetState, this.TARGET_FLO_TO_HOMEKIT[this.systemTargetState]);
@@ -123,7 +122,6 @@ class FloSmartWater {
       valveService.updateCharacteristic(this.Characteristic.StatusFault, this.systemFault);
 
     }
-
   }
 
   setAccessory(accessory)  {
@@ -164,10 +162,9 @@ class FloSmartWater {
     valveService.setCharacteristic(this.Characteristic.StatusFault, this.systemFault);
     valveService.setCharacteristic(this.Characteristic.IsConfigured,this.VALVE_CONFIGURED_STATE[this.isInstalled]);
     
-  // water temp was deprecated by FLO. If control exist removed it.
+    // water temp was deprecated by FLO. If control exist removed it.
     // Remove service if already created in cache accessory
     var temperatureService;
-  
     temperatureService = this.accessory.getService(this.Service.TemperatureSensor);
     if (temperatureService!= undefined) this.accessory.removeService(temperatureService);
     
