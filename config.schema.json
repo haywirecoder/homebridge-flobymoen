@@ -115,7 +115,34 @@
             4320
           ]
         }
-        ] 
+        ],
+        "required": true
+      },
+      "securityControlOption": {
+        "title": "Security Control Options",
+        "type": "integer",
+        "default": 0,
+        "description": "This option allows you to control the display of the security control in HomeKit. The default is to display the security control. If security control is not displayed, auxiliary switch will be used to control the valve.",
+        "oneOf": [{
+          "title": "Enable Security Control",
+          "enum": [
+            0
+          ]
+        },
+        {
+          "title": "Enable Security Control, with no notifications and no alarm",
+          "enum": [
+            1
+          ]
+        },
+        {
+          "title": "Disable Security Control",
+          "enum": [
+            2
+          ]
+        }
+        ],
+        "required": true
       },
       "excludedDevices": {
         "type": "array",
@@ -158,9 +185,11 @@
       "expandable": true,
       "title": "Advanced Options",
       "items": [
+        "securityControlOption",
         "showGPMPSIasLight",
         "treatWarningAsCritical",
         "clearOnNoLeak",
+        "retryErrorDisplay",
         {
           "key": "disableCache",
           "description": "Disabled the storage of Flo access token to local Homebridge server. Refresh token at start-up."
@@ -180,8 +209,7 @@
               ]
             }
           ]
-        },
-        "retryErrorDisplay"
+        }
       ]
     }
   ]
