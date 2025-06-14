@@ -90,6 +90,7 @@ class FloWaterSensor {
     // Check if Temperature and Humidity should be shown in homekit
     var tempService;
     var humService;
+    
     if (this.IsTemperatureAndHumidity)
     {
       // Add temperature sensor
