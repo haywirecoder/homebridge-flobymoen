@@ -209,8 +209,8 @@ class FlobyMoen extends EventEmitter {
                             const device_response = await axios.get(url, discoverHeader);
                             var device_info = device_response;
                             this.log.debug("Device Raw Data: ", device_info.data);
-                            if (this.excludedDevices.includes(device_info.data.serialNumber)) {
-                                this.log.info(`Flo Info: Excluding sensor with serial '${device_info.data.serialNumber}'`);
+                            if (this.excludedDevices.includes(device_info.data.serialNumber) || this.excludedDevices.includes(device_info.data.deviceid)) {
+                                this.log.info(`Flo Info: Excluding sensor with serial number '${device_info.data.serialNumber}' with device ID of '${device_info.data.deviceid}'`);
                                
                             } else {
                                 if (device_info.data.id != undefined) {

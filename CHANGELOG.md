@@ -1,5 +1,9 @@
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
 # Change Log
+# v1.0.20 (2024-06-14)
+### Changes
+* Add functionality to control the appear of the security control tile in Homekit. 
+
 # v1.0.19 (2024-12-27)
 ### Changes
 * Remove temperature for the Flo Valve, this attribute has been deprecated by Flo (moen). 

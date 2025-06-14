@@ -98,7 +98,7 @@ class FloByMoenPlatform {
     let currentDevice = this.flo.flo_devices[i];
     switch (currentDevice.type) {
         case FLO_SMARTWATER:
-          if (this.alarmOption <=1) {
+          if (this.securityControlOption <=1) {
             var smartWaterAccessory = new smartwater(this.flo, currentDevice, this.log, this.config, Service, Characteristic, UUIDGen, i);
             // check the accessory was not restored from cache
             var foundAccessory = this.accessories.find(accessory => accessory.UUID === smartWaterAccessory.uuid)
@@ -114,8 +114,8 @@ class FloByMoenPlatform {
               smartWaterAccessory.setAccessory(foundAccessory);
             this.floDeviceAccessory.push(smartWaterAccessory);
           } else {
-            IsAuxFloSwitchEnabled = true; // if alarm option is set to 2, we need to create an aux switch for the flo device.
-            this.log.info("Flo Alarm control disabled. Auxiliary switch control will be used.");
+            IsAuxFloSwitchEnabled = true; // if alarm option is set to not display, we need to create an aux switch for the flo device.
+            this.log.info("Flo Alarm control disabled. Auxiliary switch control will be shown.");
           }
 
           if(IsHealthSwitchEnabled) {
