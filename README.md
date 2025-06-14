@@ -32,7 +32,7 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 | securityControlOption | This option allows you to control the display of the security control and notification in HomeKit. The default is to display the security control. If security control is not displayed, auxiliary switch will be used to control the valve.|
 | showAuxSwitch         | Display an auxiliary water on/off switch. This is useful in Apple's Home application. Other Homekit applications such as Eve expose the Flo valve for automation. Default to <i>false</i>, this is an optional value.|
 | offlineTimeLimit         | Battery device periodically send data to the Flo servers. This value determine how long before plug-in indicates the device is offline and a general fault is generated. Defaults to <i>4</i> hours.|
-| securityControlOption         | This option allows you to control the display of the security control in HomeKit. The default is to display the security control. If security control is not displayed, auxiliary switch will be used to control the valve. Defaults: <i>Enable Security Control</i>.|
+| securityControlOption         | This option allows you to control the display of the security control in HomeKit. The default is to display the security control. If security control is not displayed, auxiliary switch will be used to control the valve. Default to  <i>Enable Security Control</i>.|
 | excludedDevices         | Using the device serial number to suppress from HomeKit. This is an optional value. | |
 
 
