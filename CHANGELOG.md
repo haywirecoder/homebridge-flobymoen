@@ -1,5 +1,10 @@
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
 # Change Log
+# v1.0.21 (2026-04-20)
+### Enhancements
+* Library updates
+* Add support for OAuth2 login 
+
 # v1.0.20 (2024-06-14)
 ### Changes
 * Add functionality to control the appear of the security control tile in Homekit. 
