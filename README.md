@@ -26,7 +26,6 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 | sleepRevertMinutes          | When Smart Water Shutoff Value is put into sleep what amount of time before it reverted back to previous mode (away or home).  Time value is provided in minutes (<i>120, 1440, 4320</i>). Default to <i>120</i> mins (2 hours), this is an optional value.
 | showTemperatureAndHumidity| Display Temperature and Humidity for Water Sensors in Homekit.   Default to <i>true</i>, this is an optional value.                                                        |
 | showHealthTestSwitch | Display Health Check switch in Homekit. The switch will turn on for 4 mins while Flo runs the health check.  Default to <i>false</i>, this is an optional value.        
-| disableCache         | Disable the storage of Flo access token. This will cause plug-in to obtain a new access token upon startup. This could result in a minor performance hit at startup. Default to <i>false</i>, this is an optional value. |                                           
 | enableValveControl         | Enable Homekit to control the Smart Water Shutoff valve. By design the valve will display in Homekit (e.g. Home). The status of the valve will be displayed and monitored, however it will not be controllable (e.g. Open or Close) unless this value is set to true. Default to <i>false</i>, this is an optional value.   |
 | treatWarningAsCritical         | By default Flo warnings are treated as alarm faults. Set this value to <i>true</i> to escalated Flo warnings to critical resulting in a Homekit alarm trigger event. |
 | securityControlOption | This option allows you to control the display of the security control and notification in HomeKit. The default is to display the security control. If security control is not displayed, auxiliary switch will be used to control the valve.|
@@ -40,18 +39,36 @@ An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. 
 
 Example configuration is below.
 
-```javascript
-...
-
+```json
+{
 "platforms": [
 {
     "name": "Flo-by-Moen",
     "auth" : {
-      "username": <username>,
-      "password": <password>
+      "username": "your-email@example.com",
+      "password": "your-password"
     },
     "deviceRefresh": 90,
     "sleepRevertMinutes": 120,
     "platform": "Flo-by-Moen"
 }
-...
+]
+}
+```
+
+## Read-only authentication test
+
+Before installing the development branch into Homebridge, you can verify Moen SSO
+login and device discovery without sending any valve-control request:
+
+```shell
+read "MOEN_EMAIL?Moen email: "
+read -s "MOEN_PASSWORD?Moen password: "
+echo
+export MOEN_EMAIL MOEN_PASSWORD
+npm run smoke
+unset MOEN_EMAIL MOEN_PASSWORD
+```
+
+The test prints device names, types, and reported valve states. It never prints or
+stores the password or returned tokens.

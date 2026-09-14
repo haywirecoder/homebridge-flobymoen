@@ -1,28 +1,17 @@
 
 const EventEmitter = require('events');
-const axios = require('axios');
-const storage = require('node-persist');
+const { FloApiClient } = require('./dist/floApiClient');
+const { MoenAuthService } = require('./dist/moenAuthService');
 
 // URL constant for retrieving data
-const FLO_V1_API_BASE = 'https://api.meetflo.com/api/v1';
 const FLO_V2_API_BASE = 'https://api-gw.meetflo.com/api/v2';
-const HEADER_ORIGIN = "https://user.meetflo.com";
-const HEADER_REFERER = "https://user.meetflo.com/home";
-const FLO_AUTH_URL       = FLO_V1_API_BASE + '/users/auth';
-const FLO_USERTOKENS_URL = FLO_V1_API_BASE + '/usertokens/me';
-const FLO_PRESENCE_HEARTBEAT = FLO_V2_API_BASE + '/presence/me';
-// Generic header for Safari macOS to interact with Flo api
-const FLO_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36';
-const TIMEOUT = 120000;
 const FLO_WATERSENSOR ='puck_oem';
 const FLO_SMARTWATER = 'flo_device_v2';
 
 class FlobyMoen extends EventEmitter {
-    auth_token = {};
     flo_devices = [];
     flo_locations = [];
     excludedDevices = []
-    tokenRefreshHandle;
     deviceRefreshHandle;
     alertRefreshHandle;
     deviceRefreshTime;
@@ -32,11 +21,10 @@ class FlobyMoen extends EventEmitter {
     maxErrorCount;
     
 
-    constructor(log, config, persistPath) {
+    constructor(log, config, persistPath, dependencies = {}) {
         super();
         this.log = log || console.log;
         this.persistPath = persistPath;
-        this.tokenRefreshHandle = null;
         this.deviceRefreshHandle = null;
         this.alertRefreshHandle = null;
         this.deviceRefreshTime = config.deviceRefresh * 1000 || 90000;
@@ -44,53 +32,17 @@ class FlobyMoen extends EventEmitter {
         this.sleepRevertMinutes = config.sleepRevertMinutes || 120;
         this.offlineTimeLimit = config.offlineTimeLimit || 4 ;
         this.excludedDevices = config.excludedDevices || [];
-        this.auth_token.username = config.auth.username;
-        this.auth_token.password = config.auth.password;
+        this.auth = dependencies.auth || new MoenAuthService(config.auth.username, config.auth.password);
+        this.client = dependencies.client || new FloApiClient(this.auth);
+        this.authenticated = false;
         this.maxErrorCount = config.retryErrorDisplay || 3;
         this.isBusy = false; 
     };
 
     async init() {
-
-        // Retrieve login storage login information
-        if(this.persistPath != undefined)
-        {
-            // Initializes the storage
-            await storage.init({dir:this.persistPath, forgiveParseErrors: true});
-            // Get persist items, if exist...
-            this.auth_token.user_id  = await storage.getItem('user_id'); 
-            this.auth_token.expiry = await storage.getItem('expiry'); 
-            this.auth_token.token = await storage.getItem('token'); 
-            // Set timer to obtain new token
-            this.log.info("Flo Info: Using local cache Flo token.");
-           
-        }
-        else  
-            this.log.info("Flo Info: Local caching of Flo token is disabled.");
-
-        // If token not present or expired obtain new token
-        if (!this.isLoggedIn()) {
-            // obtain new token
-            await this.refreshToken();
-        }
-        else
-        {
-            var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
-            this.log.info(`Flo Info: Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
-            // Display temporary access 
-            this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
-            // Build query header for future transactions
-            this.auth_token.header = {
-            headers: {
-                    'User-Agent': FLO_USER_AGENT,
-                    'Content-Type': 'application/json;charset=UTF-8',
-                    'Accept': 'application/json',
-                    'authorization': this.auth_token.token
-                    }
-            };
-
-        }
-        return true;
+        // Tokens are deliberately kept in memory by MoenAuthService. They are not
+        // written to Homebridge's persist directory or printed to the debug log.
+        return this.refreshToken();
     };
 
     startPollingProcess()
@@ -110,65 +62,24 @@ class FlobyMoen extends EventEmitter {
     };
 
     isLoggedIn() {
-        // determine time the elapse between now and token usage.
-        let tokenExpiration = Math.floor(this.auth_token.expiry - Date.now());
-        return ((this.auth_token.token != undefined) && (tokenExpiration > 0));
+        return this.authenticated;
     };
 
-    // After login Flo system returns a token that used for all transaction. This topic must be periodically refresh
-    // This method login, gets the token and store for later transaction.
+    // Validate the configured credentials. MoenAuthService owns token refresh thereafter.
     async refreshToken() {
 
-        this.log.info("Flo Status: Refreshing Token...");
+        this.log.info("Flo Status: Authenticating with Moen SSO...");
         try {
-           
-            const response = await axios.post(FLO_AUTH_URL, {
-            'username': this.auth_token.username,
-            'password': this.auth_token.password });
-            // Successful login, store token and built transaction header data for future transactions
-            this.auth_token.token = response.data.token;
-            this.auth_token.user_id = response.data.tokenPayload.user.user_id;
-
-            // Calculated expiration time assume half life of token provided
-            this.auth_token.expiry = Date.now() + ((response.data.tokenExpiration * 1000)/2); 
-
-            // store for later use user ID, token and expiration date, if system is restarted for any reason.
-            if(this.persistPath != undefined)
-            {
-                storage.setItem('user_id',this.auth_token.user_id);
-                storage.setItem('token',this.auth_token.token);
-                storage.setItem('expiry',this.auth_token.expiry);
-            }
-
-            // Display temporary access 
-            this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
-             // Build query header for future transactions
-            this.auth_token.header = {
-            headers: {
-                    'User-Agent': FLO_USER_AGENT,
-                    'Content-Type': 'application/json;charset=UTF-8',
-                    'Accept': 'application/json',
-                    'authorization': this.auth_token.token
-                    }
-            };
-
-            // Set timer to obtain new token
-            var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
-            // Display refreshing token information 
-            this.log.info(`Flo Info: Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
+            await this.auth.getAccessToken();
+            this.authenticated = true;
+            this.log.info("Flo Info: Moen SSO authentication successful.");
             return true;
         
         }
         catch(err) {
             // Something went wrong, display message and return negative return code
-            if (err.response) {
-                this.log.error('Flo login error: Server responded with status code:', err.response.status);
-                this.log.error('Response data:', err.response.data);
-              } else if (err.request) {
-                this.log.error('Flo login error: No response received:', err.request);
-              } else {
-                this.log.error('Flo login error: Error creating request:', err.message);
-            }
+            this.authenticated = false;
+            this.log.error('Flo login error:', err.message);
             return false;
         } 
     };
@@ -180,34 +91,25 @@ class FlobyMoen extends EventEmitter {
          if (!this.isLoggedIn()) {
             await this.refreshToken();
         }
-        // Create path for locations listing
-        var url = FLO_V2_API_BASE + "/users/" + this.auth_token.user_id + "?expand=locations"; 
-
-        var getHeader = { 
-            'Origin': HEADER_ORIGIN,
-            'Referer': HEADER_REFERER,
-            'timeout': TIMEOUT
-        }
-
-        var discoverHeader = {
-            ...this.auth_token.header,
-            ...getHeader
-        }
-        this.log.debug("discoverDevices:  " + url + " Discover Object: " + JSON.stringify(discoverHeader));
+        // Migrated accounts resolve their Flo user through Moen sync, then list locations.
+        var url = FLO_V2_API_BASE + "/moen/sync/me";
+        this.log.debug("discoverDevices:  " + url);
         try {
-            // Get devices at location 
-            const loc_response = await axios.get(url, discoverHeader);
-            var locations_info = loc_response; 
+            const locations_info = { data: await this.client.getLocations() };
             // Get each device at each location
-            for (var i = 0; i < locations_info.data.locations.length; i++) {
+            for (var i = 0; i < locations_info.data.length; i++) {
+                    const location = locations_info.data[i];
+                    const locationId = location.id;
                     // Store location for future use
-                    this.flo_locations[i] = locations_info.data.locations[i].id;
+                    this.flo_locations[i] = locationId;
+                    const locationDevices = location.devices || [];
                     // for each location get devices
-                    for (var z = 0; z < locations_info.data.locations[i].devices.length; z++) {
-                        url = FLO_V2_API_BASE + "/devices/" + locations_info.data.locations[i].devices[z].id;
+                    for (var z = 0; z < locationDevices.length; z++) {
+                        const deviceReference = locationDevices[z];
+                        const deviceId = typeof deviceReference === 'object' ? deviceReference.id : deviceReference;
+                        url = FLO_V2_API_BASE + "/devices/" + deviceId;
                         try {
-                            const device_response = await axios.get(url, discoverHeader);
-                            var device_info = device_response;
+                            const device_info = { data: await this.client.getDevice(deviceId) };
                             this.log.debug("Device Raw Data: ", device_info.data);
                             if (this.excludedDevices.includes(device_info.data.serialNumber) || this.excludedDevices.includes(device_info.data.deviceid)) {
                                 this.log.info(`Flo Info: Excluding sensor with serial number '${device_info.data.serialNumber}' with device ID of '${device_info.data.deviceid}'`);
@@ -310,7 +212,7 @@ class FlobyMoen extends EventEmitter {
         var response;
         this.log.debug("setSystemMode:  " + url + " Request Object: " + JSON.stringify(modeRequestbody));
         try {
-            response = await axios.post(url, modeRequestbody, this.auth_token.header);
+            response = await this.client.post(`/locations/${encodeURIComponent(location)}/systemMode`, modeRequestbody);
             this.log.info("Flo System Mode: System Monitoring mode change to : " , mode);
             this.log.debug(response);
         } catch(err)
@@ -350,7 +252,7 @@ class FlobyMoen extends EventEmitter {
         var response;
         this.log.debug("SetValue:  " + url + " Request Object: " + JSON.stringify(modeRequestbody));
         try {
-            response = await axios.post(url, modeRequestbody, this.auth_token.header);
+            response = await this.client.setValve(deviceid, mode);
             // No error response. Change modes to desire stated and emit changes for smartvalve objects
             this.flo_devices[deviceIndex].valveGlobalState = mode;
             this.emit(this.flo_devices[deviceIndex].deviceid, {
@@ -389,7 +291,7 @@ class FlobyMoen extends EventEmitter {
         this.log.debug("runHealthCheck URL:  " + url);
         try {
             this.log.info("Flo Health: Running Health Check. This will take 4 minutes to complete.");
-            response = await axios.post(url, runHealthRequestbody, this.auth_token.header);
+            response = await this.client.post(`/devices/${encodeURIComponent(deviceid)}/healthTest/run`, runHealthRequestbody);
             this.log.debug(response);
         } catch(err)
         {
@@ -411,7 +313,7 @@ class FlobyMoen extends EventEmitter {
         
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
-            await refreshToken();
+            await this.refreshToken();
         }
        
         var statusheader = { 'isInternalAlarm': 'false',
@@ -423,22 +325,11 @@ class FlobyMoen extends EventEmitter {
                    'size': 100
         }
 
-        var systemstatusheader = {
-                ...this.auth_token.header,
-                ...statusheader
-        }
+        var systemstatusheader = statusheader;
         this.log.info(systemstatusheader);
 
         
-        // var url = FLO_V2_API_BASE + "/alerts";
-        // try {
-        //     const alarm_response = await axios.get(url, systemstatusheader);
-        //     this.log.info(alarm_response.data);
-        // }
-        // catch (err)
-        // {
-        //     this.log.error("Flo error getting alerts:  " + err.message);
-        // }
+        // Alert retrieval is not currently used by an accessory.
     };
 
     async getAlarms() {
@@ -452,8 +343,8 @@ class FlobyMoen extends EventEmitter {
         this.log.debug("getAlarm:  " + url);
         try {
 
-            var alarm_status = await axios.get(url, this.auth_token.header);
-            this.log.info("Device Updated Data: ", alarm_status.data);
+            var alarm_status = await this.client.get('/alarms');
+            this.log.info("Device Updated Data: ", alarm_status);
             
         }
         catch(err) {
@@ -470,21 +361,10 @@ class FlobyMoen extends EventEmitter {
         }
         // Get device
         var url = FLO_V2_API_BASE + "/devices/" + this.flo_devices[deviceIndex].deviceid; 
-        var getHeader = { 
-            'Origin': HEADER_ORIGIN,
-            'Referer': HEADER_REFERER,
-            'timeout': TIMEOUT
-        }
-
-        var refreshHeader = {
-            ...this.auth_token.header,
-            ...getHeader
-        }
-               
-        this.log.debug("refreshDevice:  " + url + " Refreash Object: " + JSON.stringify(refreshHeader));
+        this.log.debug("refreshDevice:  " + url);
         try {
 
-            var device_info = await axios.get(url, refreshHeader);            
+            var device_info = { data: await this.client.getDevice(this.flo_devices[deviceIndex].deviceid) };
             // Has the object been updated? If the device has not been heard from, no change is needed
             this.log.debug("Getting Update time ", this.flo_devices[deviceIndex].name);
             
@@ -566,7 +446,7 @@ class FlobyMoen extends EventEmitter {
         catch(err) {
                 // At times the plug-in reports a 502 error. This is a communication error with the Flo server,
                 // an occasional error will not effect operations, suppress unless it is occurring frequently.
-                if(err.response.status == 502)
+                if((err.status || err.response?.status) == 502)
                 {
                     this.flo_devices[deviceIndex].errorCount += 1;
                     if (this.flo_devices[deviceIndex].errorCount > this.maxErrorCount)
@@ -617,14 +497,14 @@ class FlobyMoen extends EventEmitter {
 
         var startDateFormat = startDate.getFullYear() + "-" + String(startDate.getMonth() + 1).padStart(2, '0') + "-" + String(startDate.getDate()).padStart(2, '0');
         var endDateFormat = endDate.getFullYear() + "-" + String(endDate.getMonth() + 1).padStart(2, '0') + "-" + String(endDate.getDate()).padStart(2, '0');
-        var url = "https://api-gw.meetflo.com/api/v2/water/consumption?startDate=" + startDateFormat + "&endDate=" + endDateFormat + "&locationId=" + location_id + "&interval=1h";
+        var path = "/water/consumption?startDate=" + startDateFormat + "&endDate=" + endDateFormat + "&locationId=" + location_id + "&interval=1h";
+        var url = FLO_V2_API_BASE + path;
     
         this.log.debug("getConsumption:  " + url);
    
         try
         {
-            var response = await axios.get(url, this.auth_token.header);
-            var data = response.data
+            var data = await this.client.get(path);
             device.sumTotalGallonsConsumed = data.aggregations.sumTotalGallonsConsumed;
                             
         } 
@@ -657,7 +537,7 @@ class FlobyMoen extends EventEmitter {
         }
         // Generate presence ping
         try {
-            const response = await axios.post(FLO_PRESENCE_HEARTBEAT,header, this.auth_token.header);
+            await this.client.post('/presence/me', header);
             this.log("Presence ping successful.");
         } catch(err)
         {

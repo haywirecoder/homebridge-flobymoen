@@ -35,11 +35,6 @@
           }
         }
       },
-        "disableCache": {
-        "title": "Disable Caching of Flo Token",
-        "type": "boolean",
-        "default": false
-      },
         "showTemperatureAndHumidity": {
         "title": "Show Water Sensor Temperature and Humidity in HomeKit",
         "type": "boolean",
@@ -190,11 +185,6 @@
         "treatWarningAsCritical",
         "clearOnNoLeak",
         "retryErrorDisplay",
-        {
-          "key": "disableCache",
-          "description": "Disabled the storage of Flo access token to local Homebridge server. Refresh token at start-up."
-
-        },
         {
           "key": "excludedDevices",
           "title": "Excluded Devices",

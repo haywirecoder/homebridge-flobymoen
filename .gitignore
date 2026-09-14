@@ -1,5 +1,4 @@
-# Ignore compiled code
-dist
+# The compiled runtime in dist is committed so Git installs do not need TypeScript.
 
 # ------------- Defaults ------------- #
 
@@ -86,7 +85,6 @@ web_modules/
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Gatsby files
 .cache/
