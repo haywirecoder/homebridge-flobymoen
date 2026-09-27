@@ -317,7 +317,7 @@ class FlobyMoen extends EventEmitter {
                 }
                 return true;
         } catch(err) {
-            this.log.error("FLo error device discovery unsuccessful:  " + err.message + ". Please check configuration and restart the plug-in");
+            this.log.error("Flo error device discovery unsuccessful:  " + err.message + ". Please check your configuration and restart the plug-in");
             return false;
         }
     };

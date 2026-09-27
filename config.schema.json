@@ -34,7 +34,7 @@
             }
           },
           "useSSO": {
-            "title": "Use Moen SSO login",
+            "title": "Use Moen SSO (Cognito) login",
             "description": "Use the Moen SSO (Cognito) auth flow, which is what the current Moen app uses. The legacy login still works and remains the default; enable this only if you want the newer flow.",
             "type": "boolean",
             "default": false
@@ -177,6 +177,7 @@
         "name",
         "auth.username",
         "auth.password",
+        "auth.useSSO",
         "deviceRefresh",
         "sleepRevertMinutes",
         "showTemperatureAndHumidity",
