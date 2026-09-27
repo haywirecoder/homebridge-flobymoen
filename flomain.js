@@ -10,6 +10,14 @@ const HEADER_ORIGIN = "https://user.meetflo.com";
 const HEADER_REFERER = "https://user.meetflo.com/home";
 const FLO_AUTH_URL       = FLO_V1_API_BASE + '/users/auth';
 const FLO_USERTOKENS_URL = FLO_V1_API_BASE + '/usertokens/me';
+// Moen SSO (Cognito) auth -- the flow the current Moen app uses. Enable via the
+// "useSSO" config option; the legacy users/auth flow remains the default.
+// NOTE: the two tokens are not interchangeable in the header. Measured 2026-08-20 on
+// GET api-gw /api/v2/users/{id}: SSO must be sent as "Bearer <tok>" (200), the legacy
+// token must be sent raw (200) and returns 401 if sent as a Bearer.
+const FLO_SSO_TOKEN_URL  = 'https://4j1gkf0vji.execute-api.us-east-2.amazonaws.com/prod/v1/oauth2/token';
+const FLO_SSO_CLIENT_ID  = '6qn9pep31dglq6ed4fvlq6rp5t';
+const FLO_V2_USERS_ME    = FLO_V2_API_BASE + '/users/me';
 const FLO_PRESENCE_HEARTBEAT = FLO_V2_API_BASE + '/presence/me';
 // Generic header for Safari macOS to interact with Flo api
 const FLO_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36';
@@ -46,6 +54,8 @@ class FlobyMoen extends EventEmitter {
         this.excludedDevices = config.excludedDevices || [];
         this.auth_token.username = config.auth.username;
         this.auth_token.password = config.auth.password;
+        // Use the Moen SSO (Cognito) auth flow instead of the legacy one. Opt-in.
+        this.useSSO = config.auth.useSSO || false;
         this.maxErrorCount = config.retryErrorDisplay || 3;
         this.isBusy = false; 
     };
@@ -58,12 +68,23 @@ class FlobyMoen extends EventEmitter {
             // Initializes the storage
             await storage.init({dir:this.persistPath, forgiveParseErrors: true});
             // Get persist items, if exist...
-            this.auth_token.user_id  = await storage.getItem('user_id'); 
-            this.auth_token.expiry = await storage.getItem('expiry'); 
-            this.auth_token.token = await storage.getItem('token'); 
-            // Set timer to obtain new token
-            this.log.info("Flo Info: Using local cache Flo token.");
-           
+            this.auth_token.user_id  = await storage.getItem('user_id');
+            this.auth_token.expiry = await storage.getItem('expiry');
+            this.auth_token.token = await storage.getItem('token');
+            // A cached token is only usable by the auth mode that created it (a legacy
+            // token sent as a Bearer, or vice versa, is rejected). Discard on mismatch.
+            const cachedAuthMode = await storage.getItem('authMode');
+            const currentAuthMode = this.useSSO ? 'sso' : 'legacy';
+            if (this.auth_token.token != undefined && cachedAuthMode != currentAuthMode) {
+                this.log.info(`Flo Info: Cached token was issued for '${cachedAuthMode || 'legacy'}' auth but '${currentAuthMode}' is configured; discarding it.`);
+                this.auth_token.token = undefined;
+                this.auth_token.expiry = undefined;
+                this.auth_token.user_id = undefined;
+            }
+            else
+                // Set timer to obtain new token
+                this.log.info("Flo Info: Using local cache Flo token.");
+
         }
         else  
             this.log.info("Flo Info: Local caching of Flo token is disabled.");
@@ -85,7 +106,7 @@ class FlobyMoen extends EventEmitter {
                     'User-Agent': FLO_USER_AGENT,
                     'Content-Type': 'application/json;charset=UTF-8',
                     'Accept': 'application/json',
-                    'authorization': this.auth_token.token
+                    'authorization': (this.useSSO ? 'Bearer ' + this.auth_token.token : this.auth_token.token)
                     }
             };
 
@@ -122,15 +143,32 @@ class FlobyMoen extends EventEmitter {
         this.log.info("Flo Status: Refreshing Token...");
         try {
            
-            const response = await axios.post(FLO_AUTH_URL, {
-            'username': this.auth_token.username,
-            'password': this.auth_token.password });
-            // Successful login, store token and built transaction header data for future transactions
-            this.auth_token.token = response.data.token;
-            this.auth_token.user_id = response.data.tokenPayload.user.user_id;
+            if (this.useSSO) {
+                // Moen SSO (Cognito): exchange username/password for a bearer access token.
+                const response = await axios.post(FLO_SSO_TOKEN_URL, {
+                'username': this.auth_token.username,
+                'password': this.auth_token.password,
+                'client_id': FLO_SSO_CLIENT_ID });
+                this.auth_token.token = response.data.token.access_token;
+                // Calculated expiration time assume half life of token provided
+                this.auth_token.expiry = Date.now() + (((response.data.token.expires_in || 3600) * 1000)/2);
+                // The SSO token does not embed the user id; resolve it from /users/me.
+                const meResponse = await axios.get(FLO_V2_USERS_ME, { headers: {
+                    'User-Agent': FLO_USER_AGENT,
+                    'Accept': 'application/json',
+                    'authorization': 'Bearer ' + this.auth_token.token } });
+                this.auth_token.user_id = meResponse.data.id;
+            } else {
+                const response = await axios.post(FLO_AUTH_URL, {
+                'username': this.auth_token.username,
+                'password': this.auth_token.password });
+                // Successful login, store token and built transaction header data for future transactions
+                this.auth_token.token = response.data.token;
+                this.auth_token.user_id = response.data.tokenPayload.user.user_id;
 
-            // Calculated expiration time assume half life of token provided
-            this.auth_token.expiry = Date.now() + ((response.data.tokenExpiration * 1000)/2); 
+                // Calculated expiration time assume half life of token provided
+                this.auth_token.expiry = Date.now() + ((response.data.tokenExpiration * 1000)/2);
+            }
 
             // store for later use user ID, token and expiration date, if system is restarted for any reason.
             if(this.persistPath != undefined)
@@ -138,6 +176,9 @@ class FlobyMoen extends EventEmitter {
                 storage.setItem('user_id',this.auth_token.user_id);
                 storage.setItem('token',this.auth_token.token);
                 storage.setItem('expiry',this.auth_token.expiry);
+                // Record which auth mode issued this token so a stale one isn't reused
+                // after the useSSO option is toggled.
+                storage.setItem('authMode', this.useSSO ? 'sso' : 'legacy');
             }
 
             // Display temporary access 
@@ -148,7 +189,7 @@ class FlobyMoen extends EventEmitter {
                     'User-Agent': FLO_USER_AGENT,
                     'Content-Type': 'application/json;charset=UTF-8',
                     'Accept': 'application/json',
-                    'authorization': this.auth_token.token
+                    'authorization': (this.useSSO ? 'Bearer ' + this.auth_token.token : this.auth_token.token)
                     }
             };
 

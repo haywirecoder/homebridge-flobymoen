@@ -32,6 +32,12 @@
             "x-schema-form": {
               "type": "password"
             }
+          },
+          "useSSO": {
+            "title": "Use Moen SSO login",
+            "description": "Use the Moen SSO (Cognito) auth flow, which is what the current Moen app uses. The legacy login still works and remains the default; enable this only if you want the newer flow.",
+            "type": "boolean",
+            "default": false
           }
         }
       },
