@@ -2,6 +2,7 @@
 const EventEmitter = require('events');
 const axios = require('axios');
 const storage = require('node-persist');
+const crypto = require('crypto');
 
 // URL constant for retrieving data
 const FLO_V1_API_BASE = 'https://api.meetflo.com/api/v1';
@@ -70,7 +71,15 @@ class FlobyMoen extends EventEmitter {
             // Get persist items, if exist...
             this.auth_token.user_id  = await storage.getItem('user_id');
             this.auth_token.expiry = await storage.getItem('expiry');
-            this.auth_token.token = await storage.getItem('token');
+            const storedToken = await storage.getItem('token');
+            if (storedToken != undefined && storedToken.includes(':')) {
+                // Reverse the AES-256-CBC encryption applied when the token was persisted.
+                const [tokenIvHex, tokenEncHex] = storedToken.split(':');
+                const tokenDecipher = crypto.createDecipheriv('aes-256-cbc', crypto.createHash('sha256').update(this.persistPath).digest(), Buffer.from(tokenIvHex, 'hex'));
+                this.auth_token.token = tokenDecipher.update(tokenEncHex, 'hex', 'utf8') + tokenDecipher.final('utf8');
+            } else {
+                this.auth_token.token = storedToken;
+            }
             // A cached token is only usable by the auth mode that created it (a legacy
             // token sent as a Bearer, or vice versa, is rejected). Discard on mismatch.
             const cachedAuthMode = await storage.getItem('authMode');
@@ -174,7 +183,10 @@ class FlobyMoen extends EventEmitter {
             if(this.persistPath != undefined)
             {
                 storage.setItem('user_id',this.auth_token.user_id);
-                storage.setItem('token',this.auth_token.token);
+                // Encrypt the OAuth token at rest so filesystem access alone can't yield valid credentials.
+                const tokenIv = crypto.randomBytes(16);
+                const tokenCipher = crypto.createCipheriv('aes-256-cbc', crypto.createHash('sha256').update(this.persistPath).digest(), tokenIv);
+                storage.setItem('token', tokenIv.toString('hex') + ':' + tokenCipher.update(this.auth_token.token, 'utf8', 'hex') + tokenCipher.final('hex'));
                 storage.setItem('expiry',this.auth_token.expiry);
                 // Record which auth mode issued this token so a stale one isn't reused
                 // after the useSSO option is toggled.
