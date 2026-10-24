@@ -2,11 +2,13 @@ All notable changes to this project will be documented in this file. This projec
 # Change Log
 # v1.0.22 (2026-10-25)
 ### Break fixes
-* Multiple correction to Moen SSO (Cognito) auth flow.
+* Multiple correction to Moen SSO (Cognito) auth flow. 
+<B> NOTE: If you were using OAUTH2login flow, reconfig using useSSO option.</B> 
 
 ### Enhancements
 * Light obfuscation of the cached token so the raw value is not readable in the cache files.
 * Reduced logging noise and masking of tokens in debug mode.
+* Token refresh life has been increase to 80%, rather than 50%. This will reduce the frequency of login.
 * Documentation updates.
 
 # v1.0.21 (2026-04-20)
