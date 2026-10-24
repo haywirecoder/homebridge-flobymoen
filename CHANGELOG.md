@@ -1,9 +1,17 @@
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/).
 # Change Log
+# v1.0.22 (2026-10-25)
+### Break fixes
+* Multiple correction to Moen SSO (Cognito) auth flow.
+
+### Enhancements
+* Light obfuscation of the cached token so the raw value is not readable in the cache files.
+* Reduced logging noise and masking of tokens in debug mode.
+
 # v1.0.21 (2026-04-20)
 ### Enhancements
-* Library updates
 * Add support for OAuth2 login 
+* Dependency updates
 
 # v1.0.20 (2024-06-14)
 ### Changes

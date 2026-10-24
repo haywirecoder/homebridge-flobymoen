@@ -1,59 +1,54 @@
 [![NPM Version](https://img.shields.io/npm/v/homebridge-flobymoen.svg?style=flat-square)](https://www.npmjs.com/package/homebridge-flobymoen)
 
-
 <p align="center">
-<img src="https://github.com/haywirecoder/homebridge-flobymoen/blob/master/images/flo-by-moen-logo.jpg" width="150">
-<img src="https://github.com/homebridge/branding/blob/latest/logos/homebridge-color-round-stylized.png" width="150">
-
-
+<img src="https://github.com/haywirecoder/homebridge-flobymoen/blob/master/images/flo-by-moen-logo.jpg?raw=true" width="150" alt="Flo by Moen logo">
+<img src="https://github.com/homebridge/branding/blob/latest/logos/homebridge-color-round-stylized.png?raw=true" width="150" alt="Homebridge logo">
 </p>
 
+# Homebridge Plug-in for Flo by Moen
 
-# Homebridge Plug-In for Flo by Moen 
-An Homebridge plug-in to integrate the Flo by Moen 3 water system with HomeKit. This plug-in manages the Flo smart water kit system. It monitors and control devices via the Flo unofficial cloud API. Thanks to the aioflo Python3 library https://github.com/bachya/aioflo development team, this module uses the logic gain from reviewing those libraries/code.
+A Homebridge plug-in that integrates the Flo by Moen smart water system with HomeKit. It monitors and controls Flo devices through the unofficial Flo cloud API.
 
-## Requirements and Limitation:
-* This module works with Smart Water Shutoff and Water sensors only. It does not support Moen/Flo Smart Water Faucets.
-* This module will poll for the status of the various components based frequency provided in configuration file. No realtime notification is provided.
-* You must have an activity, working account that is capable of login into user.meetflo.com portal. Issues opened about access issue with Moen portal or mobile itself, will be close unanswered.
+Thanks to the developers of the [aioflo](https://github.com/bachya/aioflo) Python 3 library, whose code informed the logic used in this plug-in.
 
-## Configuration options
+## Requirements and Limitations
 
-| Attributes        | Description                                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| username              | Flo Moen username. This is a required value.                    |
-| password              | Flo Moen password. This is a required value.     
-| OAUTH2login        | Use moderm OAuth2 login flow, this is an optional and still under testing.                                                             |
-| deviceRefresh        | Polling interval to obtain status of Flo devices, provide in seconds. Default to <i>90</i> seconds, this is an optional value. <b>Please note:</b> Small values may cause account lock or frequent API errors.                                                                    |
-| sleepRevertMinutes          | When Smart Water Shutoff Value is put into sleep what amount of time before it reverted back to previous mode (away or home).  Time value is provided in minutes (<i>120, 1440, 4320</i>). Default to <i>120</i> mins (2 hours), this is an optional value.
-| showTemperatureAndHumidity| Display Temperature and Humidity for Water Sensors in Homekit.   Default to <i>true</i>, this is an optional value.                                                        |
-| showHealthTestSwitch | Display Health Check switch in Homekit. The switch will turn on for 4 mins while Flo runs the health check.  Default to <i>false</i>, this is an optional value.        
-| disableCache         | Disable the storage of Flo access token. This will cause plug-in to obtain a new access token upon startup. This could result in a minor performance hit at startup. Default to <i>false</i>, this is an optional value. |                                           
-| enableValveControl         | Enable Homekit to control the Smart Water Shutoff valve. By design the valve will display in Homekit (e.g. Home). The status of the valve will be displayed and monitored, however it will not be controllable (e.g. Open or Close) unless this value is set to true. Default to <i>false</i>, this is an optional value.   |
-| treatWarningAsCritical         | By default Flo warnings are treated as alarm faults. Set this value to <i>true</i> to escalated Flo warnings to critical resulting in a Homekit alarm trigger event. |
-| securityControlOption | This option allows you to control the display of the security control and notification in HomeKit. The default is to display the security control. If security control is not displayed, auxiliary switch will be used to control the valve.|
-| showAuxSwitch         | Display an auxiliary water on/off switch. This is useful in Apple's Home application. Other Homekit applications such as Eve expose the Flo valve for automation. Default to <i>false</i>, this is an optional value.|
-| offlineTimeLimit         | Battery device periodically send data to the Flo servers. This value determine how long before plug-in indicates the device is offline and a general fault is generated. Defaults to <i>4</i> hours.|
-| securityControlOption         | This option allows you to control the display of the security control in HomeKit. The default is to display the security control. If security control is not displayed, auxiliary switch will be used to control the valve. Defaults: <i>Enable Security Control</i>.|
-| excludedDevices         | Using the device serial number to suppress from HomeKit. This is an optional value. | |
+* This plug-in works with the Smart Water Shutoff valve and water sensors only. Moen/Flo Smart Water Faucets are not supported.
+* The plug-in polls the status of each device at the interval set in the configuration. Real-time notifications are not supported.
+* You must have an active, working account that can log in to the [user.meetflo.com](https://user.meetflo.com) portal. Issues about access problems with the Moen portal or the Moen mobile app itself will be closed unanswered.
 
+## Configuration Options
 
+| Attribute | Required | Default | Description |
+| --------- | -------- | ------- | ----------- |
+| `username` | Yes | | Your Flo by Moen account username. |
+| `password` | Yes | | Your Flo by Moen account password. |
+| `useSSO` | No | `false` | Use the modern Moen SSO (OAuth2) login flow instead of the legacy login. Set this inside the `auth` object, alongside `username` and `password`. This option is still under testing. |
+| `deviceRefresh` | No | `90` | Polling interval, in seconds, for retrieving the status of Flo devices. **Note:** very short intervals may cause account lockouts or frequent API errors. |
+| `sleepRevertMinutes` | No | `120` | How long, in minutes, the Smart Water Shutoff valve stays in sleep mode before reverting to its previous mode (home or away). Options: `120` (2 hours), `1440`, or `4320`. |
+| `showTemperatureAndHumidity` | No | `true` | Show temperature and humidity for water sensors in HomeKit. |
+| `showHealthTestSwitch` | No | `false` | Show a Health Check switch in HomeKit. The switch turns on for 4 minutes while Flo runs the health check. |
+| `disableCache` | No | `false` | Disable caching of the Flo access token. The plug-in will obtain a new access token at every startup, which may slightly slow startup. |
+| `enableValveControl` | No | `false` | Allow HomeKit to open and close the Smart Water Shutoff valve. By default, the valve appears in HomeKit (for example, in the Home app) and its status is displayed and monitored, but it cannot be controlled unless this option is set to `true`. |
+| `treatWarningAsCritical` | No | `false` | By default, Flo warnings are reported as alarm faults. Set to `true` to escalate Flo warnings to critical, which triggers a HomeKit alarm event. |
+| `securityControlOption` | No | Enable Security Control | Controls whether the security control and notifications are displayed in HomeKit. If the security control is not displayed, the auxiliary switch is used to control the valve. |
+| `showAuxSwitch` | No | `false` | Show an auxiliary water on/off switch. This is useful in Apple's Home app; other HomeKit apps, such as Eve, can expose the Flo valve for automation directly. |
+| `offlineTimeLimit` | No | `4` | Battery-powered devices periodically send data to the Flo servers. This value sets how long, in hours, the plug-in waits without an update before it marks the device as offline and raises a general fault. |
+| `excludedDevices` | No | | List of device serial numbers to hide from HomeKit. |
 
+## Example Configuration
 
-Example configuration is below.
+Add the following to the `platforms` array in your Homebridge `config.json`:
 
-```javascript
-...
-
-"platforms": [
+```json
 {
-    "name": "Flo-by-Moen",
-    "auth" : {
-      "username": <username>,
-      "password": <password>
-    },
-    "deviceRefresh": 90,
-    "sleepRevertMinutes": 120,
-    "platform": "Flo-by-Moen"
+  "name": "Flo-by-Moen",
+  "platform": "Flo-by-Moen",
+  "auth": {
+    "username": "<username>",
+    "password": "<password>"
+  },
+  "deviceRefresh": 90,
+  "sleepRevertMinutes": 120
 }
-...
+```
