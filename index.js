@@ -222,7 +222,8 @@ class FloByMoenPlatform {
     // Clean accessories with no association with Flo devices.
     this.orphanAccessory();
   
-    this.log.info(`Flo device updates complete, background polling process started.\nDevice will be polled each ${Math.floor((this.refreshInterval / 60))} min(s) ${Math.floor((this.refreshInterval % 60))} second(s).`);     
+    this.log.info(`Flo device updates complete, background polling process started.`);
+    this.log.info(`Device(s) will be polled each ${Math.floor((this.refreshInterval / 60))} min(s) ${Math.floor((this.refreshInterval % 60))} second(s).`);     
    
     // Start background process to poll devices.
     this.flo.startPollingProcess();

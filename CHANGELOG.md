@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. This projec
 ### Enhancements
 * Light obfuscation of the cached token so the raw value is not readable in the cache files.
 * Reduced logging noise and masking of tokens in debug mode.
+* Documentation updates.
 
 # v1.0.21 (2026-04-20)
 ### Enhancements
