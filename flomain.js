@@ -32,6 +32,7 @@ const FLO_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWeb
 const TIMEOUT = 120000;
 const FLO_WATERSENSOR ='puck_oem';
 const FLO_SMARTWATER = 'flo_device_v2';
+const TOKEN_REFRESH_FRACTION = 0.8;
 
 class FlobyMoen extends EventEmitter {
     auth_token = {};
@@ -47,6 +48,9 @@ class FlobyMoen extends EventEmitter {
     persistPath;
     maxErrorCount;
     refreshPromise = null;
+    // Used to keep routine token renewals out of the info log (see logTokenRefreshed)
+    loginHasSucceeded = false;
+    loginFailing = false;
     pingHandle = null;
     
 
@@ -114,8 +118,9 @@ class FlobyMoen extends EventEmitter {
         }
         else
         {
-            var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
-            this.log.info(`Flo Info: Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
+            this.log.info(`Flo Info: Token will refresh in ${this.formatRefreshIn()}.`);
+            // A valid cached token is an established session; later renewals are routine.
+            this.loginHasSucceeded = true;
             // Display temporary access 
             this.log.debug("Flo Token: " + this.maskToken(this.auth_token.token));
             // Build query header for future transactions
@@ -167,13 +172,13 @@ class FlobyMoen extends EventEmitter {
     };
 
     // Light obfuscation of the cached token so the raw value is not readable in the cache files.
-    // This is NOT strong protection: the key is derived from the storage path (not a secret) and the
-    // account password is stored in config.json on the same machine. Changing the key derivation
-    // would invalidate existing caches (users would simply log in again). In future if Homebridge support
-    // for secure storage is added, this can be replaced with a proper encryption mechanism.
-    
+    // This is NOT strong protection: since the account password is stored in config.json on the same machine. 
+    // Changing the key derivation would invalidate existing caches (users would simply log in again). 
+    // In future if Homebridge support for secure storage of credentials is added, would level of protection 
+    // provided by a proper encryption mechanism.
+
     tokenKey() {
-        return crypto.createHash('sha256').update(String(this.persistPath)).digest();
+        return crypto.createHash('sha256').update(String(this.auth_token.password)).digest();
     };
 
     encryptToken(token) {
@@ -226,6 +231,28 @@ class FlobyMoen extends EventEmitter {
         }
     };
 
+    // Time until the next token refresh, e.g. "0 hr 24 min".
+    formatRefreshIn() {
+        const mins = Math.max(0, Math.round((this.auth_token.expiry - Date.now()) / 60000));
+        return `${Math.floor(mins / 60)} hr ${mins % 60} min`;
+    };
+
+    // Routine renewals happen every few minutes/hours and would flood the info log, so only events
+    // someone needs to see are logged at info: the first login after startup and recovery after a
+    // failure. Every other renewal is logged at debug. Failures are logged as errors in doRefreshToken.
+    logTokenRefreshed() {
+        const msg = `Flo Info: Token refreshed; next refresh in ${this.formatRefreshIn()}.`;
+        if (!this.loginHasSucceeded) {
+            this.log.info(msg);
+        } else if (this.loginFailing) {
+            this.log.info('Flo Info: Login recovered. ' + msg);
+        } else {
+            this.log.debug(msg);
+        }
+        this.loginHasSucceeded = true;
+        this.loginFailing = false;
+    };
+
     isLoggedIn() {
         // determine time the elapse between now and token usage.
         let tokenExpiration = Math.floor(this.auth_token.expiry - Date.now());
@@ -244,7 +271,7 @@ class FlobyMoen extends EventEmitter {
 
     async doRefreshToken() {
 
-        this.log.info("Flo Status: Refreshing Token...");
+        this.log.debug("Flo Status: Refreshing Token...");
         try {
             // Collect results in locals and commit to this.auth_token only after every step succeeds,
             // so a failure part-way through can't leave a token without a user id / header.
@@ -257,8 +284,10 @@ class FlobyMoen extends EventEmitter {
                 'password': this.auth_token.password,
                 'client_id': FLO_SSO_CLIENT_ID });
                 token = response.data.token.access_token;
-                // Calculated expiration time assume half life of token provided
-                expiry = Date.now() + (((response.data.token.expires_in || 3600) * 1000)/2);
+                // Calculated expiration based refresh rate provided by the server. The server provides a token expiration time in seconds, 
+                // convert to milliseconds and apply refresh fraction.
+                expiry = Date.now() + ((response.data.token.expires_in || 3600) * 1000 * TOKEN_REFRESH_FRACTION);
+
                 // The SSO token does not embed the user id; resolve it from /users/me.
                 const meResponse = await floHttp.get(FLO_V2_USERS_ME, { headers: {
                     'User-Agent': FLO_USER_AGENT,
@@ -271,8 +300,9 @@ class FlobyMoen extends EventEmitter {
                 'password': this.auth_token.password });
                 token = response.data.token;
                 userId = response.data.tokenPayload.user.user_id;
-                // Calculated expiration time assume half life of token provided
-                expiry = Date.now() + ((response.data.tokenExpiration * 1000)/2);
+                // Calculated expiration based refresh rate provided by the server. The server provides a token expiration time in seconds, 
+                // convert to milliseconds and apply refresh fraction.
+                expiry = Date.now() + (response.data.tokenExpiration * 1000 * TOKEN_REFRESH_FRACTION);
             }
 
             if (!token || !userId || !(expiry > 0)) {
@@ -297,14 +327,13 @@ class FlobyMoen extends EventEmitter {
 
             this.log.debug("Flo Token: " + this.maskToken(this.auth_token.token));
 
-            // Display refreshing token information 
-            var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
-            this.log.info(`Flo Info: Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
+            this.logTokenRefreshed();
             return true;
         
         }
         catch(err) {
             // Something went wrong, display message and return negative return code
+            this.loginFailing = true;
             if (err.response) {
                 this.log.error('Flo login error: Server responded with status code:', err.response.status);
                 this.log.error('Response data:', err.response.data);
@@ -392,7 +421,7 @@ class FlobyMoen extends EventEmitter {
                                             this.getConsumption(device);
                                             break;
                                         default:
-                                            this.log.info("Unsupported Device Found.");
+                                            this.log.info("Unsupported Device Found. Skipping Device: ");
                                             this.log.info(device_info.data);
 
                                     } 
