@@ -1,8 +1,15 @@
 
 const EventEmitter = require('events');
 const axios = require('axios');
+const https = require('https');
 const storage = require('node-persist');
 const crypto = require('crypto');
+
+// Dedicated axios instance with keep-alive disabled. The global agent reuses a single TLS socket
+// for every poll, which triggers MaxListenersExceededWarning (error listeners pile up on the socket).
+const floHttp = axios.create({
+    httpsAgent: new https.Agent({ keepAlive: false })
+});
 
 // URL constant for retrieving data
 const FLO_V1_API_BASE = 'https://api.meetflo.com/api/v1';
@@ -39,11 +46,13 @@ class FlobyMoen extends EventEmitter {
     log;
     persistPath;
     maxErrorCount;
+    refreshPromise = null;
+    pingHandle = null;
     
 
     constructor(log, config, persistPath) {
         super();
-        this.log = log || console.log;
+        this.log = log || console;
         this.persistPath = persistPath;
         this.tokenRefreshHandle = null;
         this.deviceRefreshHandle = null;
@@ -64,6 +73,7 @@ class FlobyMoen extends EventEmitter {
     async init() {
 
         // Retrieve login storage login information
+
         if(this.persistPath != undefined)
         {
             // Initializes the storage
@@ -72,28 +82,27 @@ class FlobyMoen extends EventEmitter {
             this.auth_token.user_id  = await storage.getItem('user_id');
             this.auth_token.expiry = await storage.getItem('expiry');
             const storedToken = await storage.getItem('token');
-            if (storedToken != undefined && storedToken.includes(':')) {
-                // Reverse the AES-256-CBC encryption applied when the token was persisted.
-                const [tokenIvHex, tokenEncHex] = storedToken.split(':');
-                const tokenDecipher = crypto.createDecipheriv('aes-256-cbc', crypto.createHash('sha256').update(this.persistPath).digest(), Buffer.from(tokenIvHex, 'hex'));
-                this.auth_token.token = tokenDecipher.update(tokenEncHex, 'hex', 'utf8') + tokenDecipher.final('utf8');
-            } else {
-                this.auth_token.token = storedToken;
-            }
             // A cached token is only usable by the auth mode that created it (a legacy
             // token sent as a Bearer, or vice versa, is rejected). Discard on mismatch.
-            const cachedAuthMode = await storage.getItem('authMode');
+            // Caches written before 'authMode' existed always held legacy tokens.
+            const cachedAuthMode = (await storage.getItem('authMode')) || 'legacy';
+            if (typeof storedToken === 'string' && storedToken.includes(':')) {
+                // Reverse the obfuscation applied when the token was persisted. Returns
+                // undefined (forcing a fresh login) if it cannot be decoded.
+                this.auth_token.token = this.decryptToken(storedToken);
+            } else {
+                this.auth_token.token = (typeof storedToken === 'string') ? storedToken : undefined;
+            }
             const currentAuthMode = this.useSSO ? 'sso' : 'legacy';
             if (this.auth_token.token != undefined && cachedAuthMode != currentAuthMode) {
-                this.log.info(`Flo Info: Cached token was issued for '${cachedAuthMode || 'legacy'}' auth but '${currentAuthMode}' is configured; discarding it.`);
+                this.log.info(`Flo Info: Cached token was issued for '${cachedAuthMode}' auth but '${currentAuthMode}' is configured; discarding it.`);
                 this.auth_token.token = undefined;
                 this.auth_token.expiry = undefined;
                 this.auth_token.user_id = undefined;
             }
-            else
-                // Set timer to obtain new token
-                this.log.info("Flo Info: Using local cache Flo token.");
-
+            else if (this.auth_token.token != undefined) {
+                this.log.info(`Flo Info: Using ${cachedAuthMode} cached Flo token.`);
+            }
         }
         else  
             this.log.info("Flo Info: Local caching of Flo token is disabled.");
@@ -108,7 +117,7 @@ class FlobyMoen extends EventEmitter {
             var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
             this.log.info(`Flo Info: Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
             // Display temporary access 
-            this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
+            this.log.debug("Flo Token: " + this.maskToken(this.auth_token.token));
             // Build query header for future transactions
             this.auth_token.header = {
             headers: {
@@ -125,6 +134,9 @@ class FlobyMoen extends EventEmitter {
 
     startPollingProcess()
     {
+        // Clear any existing timers so calling this twice can't create duplicate polling loops
+        if (this.deviceRefreshHandle) clearTimeout(this.deviceRefreshHandle);
+        if (this.pingHandle) clearTimeout(this.pingHandle);
         // Set time to refresh devices
        this.deviceRefreshHandle = setTimeout(() => this.backgroundRefresh(), this.deviceRefreshTime); 
        if (this.pingRefreshTime > 0) {
@@ -139,6 +151,81 @@ class FlobyMoen extends EventEmitter {
         this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 
     };
 
+    // Build an axios config with the auth headers plus Origin/Referer (these must live under
+    // `headers`, otherwise axios ignores them) and the request timeout.
+    buildRequestConfig() {
+        const base = this.auth_token.header || {};
+        return {
+            ...base,
+            headers: {
+                ...(base.headers || {}),
+                'Origin': HEADER_ORIGIN,
+                'Referer': HEADER_REFERER
+            },
+            timeout: TIMEOUT
+        };
+    };
+
+    // Light obfuscation of the cached token so the raw value is not readable in the cache files.
+    // This is NOT strong protection: the key is derived from the storage path (not a secret) and the
+    // account password is stored in config.json on the same machine. Changing the key derivation
+    // would invalidate existing caches (users would simply log in again). In future if Homebridge support
+    // for secure storage is added, this can be replaced with a proper encryption mechanism.
+    
+    tokenKey() {
+        return crypto.createHash('sha256').update(String(this.persistPath)).digest();
+    };
+
+    encryptToken(token) {
+        const iv = crypto.randomBytes(16);
+        const cipher = crypto.createCipheriv('aes-256-cbc', this.tokenKey(), iv);
+        return iv.toString('hex') + ':' + cipher.update(token, 'utf8', 'hex') + cipher.final('hex');
+    };
+
+    // Returns the token, or undefined if the cached value cannot be decoded (storage path changed,
+    // corrupted file, etc.) so the caller falls back to a fresh login instead of crashing.
+    decryptToken(stored) {
+        try {
+            const [ivHex, encHex] = stored.split(':');
+            const decipher = crypto.createDecipheriv('aes-256-cbc', this.tokenKey(), Buffer.from(ivHex, 'hex'));
+            return decipher.update(encHex, 'hex', 'utf8') + decipher.final('utf8');
+        } catch (err) {
+            this.log.warn('Flo Info: Cached token could not be decoded; a new login will be performed.');
+            return undefined;
+        }
+    };
+
+    // Never log a full token.
+    maskToken(token) {
+        return token ? '****' + String(token).slice(-4) : '(none)';
+    };
+
+    // If Flo rejects the token before our local expiry, drop it so the next call logs in again.
+    checkAuthFailure(err) {
+        if (err && err.response && err.response.status == 401) {
+            this.log.warn('Flo Info: Token was rejected (401); a new login will be performed on the next request.');
+            this.auth_token.token = undefined;
+            this.auth_token.expiry = undefined;
+        }
+    };
+
+    async persistToken() {
+        if (this.persistPath == undefined) return;
+        try {
+            await Promise.all([
+                storage.setItem('user_id', this.auth_token.user_id),
+                storage.setItem('token', this.encryptToken(this.auth_token.token)),
+                storage.setItem('expiry', this.auth_token.expiry),
+                // Record which auth mode issued this token so a stale one isn't reused
+                // after the useSSO option is toggled.
+                storage.setItem('authMode', this.useSSO ? 'sso' : 'legacy')
+            ]);
+        } catch (err) {
+            // A caching problem must not make a successful login look like a failure.
+            this.log.warn('Flo Info: Could not cache Flo token: ' + err.message);
+        }
+    };
+
     isLoggedIn() {
         // determine time the elapse between now and token usage.
         let tokenExpiration = Math.floor(this.auth_token.expiry - Date.now());
@@ -147,55 +234,55 @@ class FlobyMoen extends EventEmitter {
 
     // After login Flo system returns a token that used for all transaction. This topic must be periodically refresh
     // This method login, gets the token and store for later transaction.
+    // Concurrent callers share one in-flight login instead of each logging in separately.
     async refreshToken() {
+        if (!this.refreshPromise) {
+            this.refreshPromise = this.doRefreshToken().finally(() => { this.refreshPromise = null; });
+        }
+        return this.refreshPromise;
+    };
+
+    async doRefreshToken() {
 
         this.log.info("Flo Status: Refreshing Token...");
         try {
-           
+            // Collect results in locals and commit to this.auth_token only after every step succeeds,
+            // so a failure part-way through can't leave a token without a user id / header.
+            let token, userId, expiry;
+
             if (this.useSSO) {
                 // Moen SSO (Cognito): exchange username/password for a bearer access token.
-                const response = await axios.post(FLO_SSO_TOKEN_URL, {
+                const response = await floHttp.post(FLO_SSO_TOKEN_URL, {
                 'username': this.auth_token.username,
                 'password': this.auth_token.password,
                 'client_id': FLO_SSO_CLIENT_ID });
-                this.auth_token.token = response.data.token.access_token;
+                token = response.data.token.access_token;
                 // Calculated expiration time assume half life of token provided
-                this.auth_token.expiry = Date.now() + (((response.data.token.expires_in || 3600) * 1000)/2);
+                expiry = Date.now() + (((response.data.token.expires_in || 3600) * 1000)/2);
                 // The SSO token does not embed the user id; resolve it from /users/me.
-                const meResponse = await axios.get(FLO_V2_USERS_ME, { headers: {
+                const meResponse = await floHttp.get(FLO_V2_USERS_ME, { headers: {
                     'User-Agent': FLO_USER_AGENT,
                     'Accept': 'application/json',
-                    'authorization': 'Bearer ' + this.auth_token.token } });
-                this.auth_token.user_id = meResponse.data.id;
+                    'authorization': 'Bearer ' + token } });
+                userId = meResponse.data.id;
             } else {
-                const response = await axios.post(FLO_AUTH_URL, {
+                const response = await floHttp.post(FLO_AUTH_URL, {
                 'username': this.auth_token.username,
                 'password': this.auth_token.password });
-                // Successful login, store token and built transaction header data for future transactions
-                this.auth_token.token = response.data.token;
-                this.auth_token.user_id = response.data.tokenPayload.user.user_id;
-
+                token = response.data.token;
+                userId = response.data.tokenPayload.user.user_id;
                 // Calculated expiration time assume half life of token provided
-                this.auth_token.expiry = Date.now() + ((response.data.tokenExpiration * 1000)/2);
+                expiry = Date.now() + ((response.data.tokenExpiration * 1000)/2);
             }
 
-            // store for later use user ID, token and expiration date, if system is restarted for any reason.
-            if(this.persistPath != undefined)
-            {
-                storage.setItem('user_id',this.auth_token.user_id);
-                // Encrypt the OAuth token at rest so filesystem access alone can't yield valid credentials.
-                const tokenIv = crypto.randomBytes(16);
-                const tokenCipher = crypto.createCipheriv('aes-256-cbc', crypto.createHash('sha256').update(this.persistPath).digest(), tokenIv);
-                storage.setItem('token', tokenIv.toString('hex') + ':' + tokenCipher.update(this.auth_token.token, 'utf8', 'hex') + tokenCipher.final('hex'));
-                storage.setItem('expiry',this.auth_token.expiry);
-                // Record which auth mode issued this token so a stale one isn't reused
-                // after the useSSO option is toggled.
-                storage.setItem('authMode', this.useSSO ? 'sso' : 'legacy');
+            if (!token || !userId || !(expiry > 0)) {
+                throw new Error('Login response did not contain a token, user id and expiration.');
             }
 
-            // Display temporary access 
-            this.log.debug("Temporary Access Flo Token: " + this.auth_token.token);
-             // Build query header for future transactions
+            // Successful login, store token and built transaction header data for future transactions
+            this.auth_token.token = token;
+            this.auth_token.user_id = userId;
+            this.auth_token.expiry = expiry;
             this.auth_token.header = {
             headers: {
                     'User-Agent': FLO_USER_AGENT,
@@ -205,9 +292,13 @@ class FlobyMoen extends EventEmitter {
                     }
             };
 
-            // Set timer to obtain new token
-            var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
+            // store for later use user ID, token and expiration date, if system is restarted for any reason.
+            await this.persistToken();
+
+            this.log.debug("Flo Token: " + this.maskToken(this.auth_token.token));
+
             // Display refreshing token information 
+            var refreshTimeoutmillis = Math.floor(this.auth_token.expiry - Date.now());
             this.log.info(`Flo Info: Token will refresh in ${Math.floor((refreshTimeoutmillis / (1000 * 60 * 60)) % 24)} hour(s) and ${Math.floor((refreshTimeoutmillis / (1000 * 60 )) % 60)} min(s).`);
             return true;
         
@@ -218,7 +309,7 @@ class FlobyMoen extends EventEmitter {
                 this.log.error('Flo login error: Server responded with status code:', err.response.status);
                 this.log.error('Response data:', err.response.data);
               } else if (err.request) {
-                this.log.error('Flo login error: No response received:', err.request);
+                this.log.error('Flo login error: No response received:', err.code || err.message);
               } else {
                 this.log.error('Flo login error: Error creating request:', err.message);
             }
@@ -236,20 +327,11 @@ class FlobyMoen extends EventEmitter {
         // Create path for locations listing
         var url = FLO_V2_API_BASE + "/users/" + this.auth_token.user_id + "?expand=locations"; 
 
-        var getHeader = { 
-            'Origin': HEADER_ORIGIN,
-            'Referer': HEADER_REFERER,
-            'timeout': TIMEOUT
-        }
-
-        var discoverHeader = {
-            ...this.auth_token.header,
-            ...getHeader
-        }
-        this.log.debug("discoverDevices:  " + url + " Discover Object: " + JSON.stringify(discoverHeader));
+        var discoverHeader = this.buildRequestConfig();
+        this.log.debug("discoverDevices:  " + url);
         try {
             // Get devices at location 
-            const loc_response = await axios.get(url, discoverHeader);
+            const loc_response = await floHttp.get(url, discoverHeader);
             var locations_info = loc_response; 
             // Get each device at each location
             for (var i = 0; i < locations_info.data.locations.length; i++) {
@@ -259,7 +341,7 @@ class FlobyMoen extends EventEmitter {
                     for (var z = 0; z < locations_info.data.locations[i].devices.length; z++) {
                         url = FLO_V2_API_BASE + "/devices/" + locations_info.data.locations[i].devices[z].id;
                         try {
-                            const device_response = await axios.get(url, discoverHeader);
+                            const device_response = await floHttp.get(url, discoverHeader);
                             var device_info = device_response;
                             this.log.debug("Device Raw Data: ", device_info.data);
                             if (this.excludedDevices.includes(device_info.data.serialNumber) || this.excludedDevices.includes(device_info.data.deviceid)) {
@@ -310,8 +392,8 @@ class FlobyMoen extends EventEmitter {
                                             this.getConsumption(device);
                                             break;
                                         default:
-                                            this.log("Unsupported Device Found.");
-                                            this.log(device_info.data);
+                                            this.log.info("Unsupported Device Found.");
+                                            this.log.info(device_info.data);
 
                                     } 
                                     // Store device in array, the array will store all of users device in all location.
@@ -363,16 +445,17 @@ class FlobyMoen extends EventEmitter {
         var response;
         this.log.debug("setSystemMode:  " + url + " Request Object: " + JSON.stringify(modeRequestbody));
         try {
-            response = await axios.post(url, modeRequestbody, this.auth_token.header);
+            response = await floHttp.post(url, modeRequestbody, this.auth_token.header);
             this.log.info("Flo System Mode: System Monitoring mode change to : " , mode);
             this.log.debug(response);
         } catch(err)
         {
+            this.checkAuthFailure(err);
             if (err.response) {
                 this.log.error('Flo system Mode: Server responded with status code:', err.response.status);
                 this.log.error('Response data:', err.response.data);
               } else if (err.request) {
-                this.log.error('Flo system Mode: No response received:', err.request);
+                this.log.error('Flo system Mode: No response received:', err.code || err.message);
               } else {
                 this.log.error('Flo system Mode: Error creating request:', err.message);
             }
@@ -403,7 +486,7 @@ class FlobyMoen extends EventEmitter {
         var response;
         this.log.debug("SetValue:  " + url + " Request Object: " + JSON.stringify(modeRequestbody));
         try {
-            response = await axios.post(url, modeRequestbody, this.auth_token.header);
+            response = await floHttp.post(url, modeRequestbody, this.auth_token.header);
             // No error response. Change modes to desire stated and emit changes for smartvalve objects
             this.flo_devices[deviceIndex].valveGlobalState = mode;
             this.emit(this.flo_devices[deviceIndex].deviceid, {
@@ -414,11 +497,13 @@ class FlobyMoen extends EventEmitter {
 
         } catch(err) {
 
+            this.checkAuthFailure(err);
+
             if (err.response) {
                 this.log.error('Flo Valve: Server responded with status code:', err.response.status);
                 this.log.error('Response data:', err.response.data);
               } else if (err.request) {
-                this.log.error('Flo Valve: No response received:', err.request);
+                this.log.error('Flo Valve: No response received:', err.code || err.message);
               } else {
                 this.log.error('Flo Valve: Error creating request:', err.message);
             }
@@ -442,15 +527,16 @@ class FlobyMoen extends EventEmitter {
         this.log.debug("runHealthCheck URL:  " + url);
         try {
             this.log.info("Flo Health: Running Health Check. This will take 4 minutes to complete.");
-            response = await axios.post(url, runHealthRequestbody, this.auth_token.header);
+            response = await floHttp.post(url, runHealthRequestbody, this.auth_token.header);
             this.log.debug(response);
         } catch(err)
         {
+            this.checkAuthFailure(err);
             if (err.response) {
                 this.log.error('Flo health: Server responded with status code:', err.response.status);
                 this.log.error('Response data:', err.response.data);
               } else if (err.request) {
-                this.log.error('Flo health: No response received:', err.request);
+                this.log.error('Flo health: No response received:', err.code || err.message);
               } else {
                 this.log.error('Flo health: Error creating request:', err.message);
             }
@@ -464,13 +550,12 @@ class FlobyMoen extends EventEmitter {
         
         // Do we have valid sessions? 
         if (!this.isLoggedIn()) {
-            await refreshToken();
+            await this.refreshToken();
         }
        
         var statusheader = { 'isInternalAlarm': 'false',
                    'locationId': this.flo_locations[0],
                    'status': 'triggered',
-                   'severity': 'warning', 
                    'severity': 'critical',
                    'page': 1,
                    'size': 100
@@ -480,12 +565,12 @@ class FlobyMoen extends EventEmitter {
                 ...this.auth_token.header,
                 ...statusheader
         }
-        this.log.info(systemstatusheader);
+        this.log.debug("getSystemAlerts: " + JSON.stringify(statusheader));
 
         
         // var url = FLO_V2_API_BASE + "/alerts";
         // try {
-        //     const alarm_response = await axios.get(url, systemstatusheader);
+        //     const alarm_response = await floHttp.get(url, systemstatusheader);
         //     this.log.info(alarm_response.data);
         // }
         // catch (err)
@@ -505,7 +590,7 @@ class FlobyMoen extends EventEmitter {
         this.log.debug("getAlarm:  " + url);
         try {
 
-            var alarm_status = await axios.get(url, this.auth_token.header);
+            var alarm_status = await floHttp.get(url, this.auth_token.header);
             this.log.info("Device Updated Data: ", alarm_status.data);
             
         }
@@ -523,21 +608,12 @@ class FlobyMoen extends EventEmitter {
         }
         // Get device
         var url = FLO_V2_API_BASE + "/devices/" + this.flo_devices[deviceIndex].deviceid; 
-        var getHeader = { 
-            'Origin': HEADER_ORIGIN,
-            'Referer': HEADER_REFERER,
-            'timeout': TIMEOUT
-        }
-
-        var refreshHeader = {
-            ...this.auth_token.header,
-            ...getHeader
-        }
+        var refreshHeader = this.buildRequestConfig();
                
-        this.log.debug("refreshDevice:  " + url + " Refreash Object: " + JSON.stringify(refreshHeader));
+        this.log.debug("refreshDevice:  " + url);
         try {
 
-            var device_info = await axios.get(url, refreshHeader);            
+            var device_info = await floHttp.get(url, refreshHeader);            
             // Has the object been updated? If the device has not been heard from, no change is needed
             this.log.debug("Getting Update time ", this.flo_devices[deviceIndex].name);
             
@@ -619,7 +695,12 @@ class FlobyMoen extends EventEmitter {
         catch(err) {
                 // At times the plug-in reports a 502 error. This is a communication error with the Flo server,
                 // an occasional error will not effect operations, suppress unless it is occurring frequently.
-                if(err.response.status == 502)
+                this.checkAuthFailure(err);
+                // Transient = a 502, or a network-level failure (timeout, ECONNRESET, DNS: axios sets
+                // err.request but no err.response). Anything else, e.g. a TypeError from an unexpected
+                // response shape, is a real error and is always logged.
+                const transient = err.response ? err.response.status == 502 : !!err.request;
+                if(transient)
                 {
                     this.flo_devices[deviceIndex].errorCount += 1;
                     if (this.flo_devices[deviceIndex].errorCount > this.maxErrorCount)
@@ -647,18 +728,22 @@ class FlobyMoen extends EventEmitter {
             this.deviceRefreshHandle = setTimeout(() => this.backgroundRefresh(), this.deviceRefreshTime); 
             return;
         }
-        // Do we have valid sessions? 
-        if (!this.isLoggedIn()) {
-            // Token is expired or not login, start session with meetflo portal.
-            await this.refreshToken();
+        try {
+            // Do we have valid sessions? 
+            if (!this.isLoggedIn()) {
+                // Token is expired or not login, start session with meetflo portal.
+                await this.refreshToken();
+            }
+            // Update all data elements
+            for (var i = 0; i < this.flo_devices.length; i++) {
+                await this.refreshDevice(i);
+            }
+        } catch (err) {
+            this.log.error("Flo error in background refresh: " + err.message);
+        } finally {
+            // Always reschedule so one unexpected error can't stop polling permanently.
+            this.deviceRefreshHandle = setTimeout(() => this.backgroundRefresh(), this.deviceRefreshTime);
         }
-        // Update all data elements
-        for (var i = 0; i < this.flo_devices.length; i++) {
-            await this.refreshDevice(i);
-        }
-       
-        // Set timer to refresh devices
-       this.deviceRefreshHandle = setTimeout(() => this.backgroundRefresh(), this.deviceRefreshTime); 
     };
    
     async getConsumption(device) {
@@ -676,7 +761,7 @@ class FlobyMoen extends EventEmitter {
    
         try
         {
-            var response = await axios.get(url, this.auth_token.header);
+            var response = await floHttp.get(url, this.auth_token.header);
             var data = response.data
             device.sumTotalGallonsConsumed = data.aggregations.sumTotalGallonsConsumed;
                             
@@ -688,43 +773,42 @@ class FlobyMoen extends EventEmitter {
     }
 
     // *******************************************************
-    // Not currently used
+    // Optional: only runs when "pingRefresh" is configured
     // *******************************************************
     // Send a presence ping to Flo, to force device updates.
     async generatePing()
     {
-        // Create browser header information to ping Flo cloud service to refreshing data from flo
-        var header = { 
-            'Connection': 'keep-alive',
-            'Content-Length': 0,
-            'sec-ch-ua': '(Not;Browser"; v="12", "Chromium"; v="73',
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': 1,
-            'sec-ch-ua-mobile': '?0',
-            'Origin': 'https://user.meetflo.com',
-            'Sec-Fetch-Site': 'same-site',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Dest': 'empty',
-            'Referer': 'https://user.meetflo.com/',
-            'Accept-Language': 'en-US,en;q=0.9,es;q=0.8'
-        }
-        // Generate presence ping
         try {
-            const response = await axios.post(FLO_PRESENCE_HEARTBEAT,header, this.auth_token.header);
-            this.log("Presence ping successful.");
+            if (!this.isLoggedIn()) {
+                await this.refreshToken();
+            }
+            // Browser-style headers belong in the request config (they were previously passed as the POST body).
+            const config = this.buildRequestConfig();
+            config.headers = {
+                ...config.headers,
+                'Accept': 'application/json, text/plain, */*',
+                'Sec-Fetch-Site': 'same-site',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Dest': 'empty',
+                'Accept-Language': 'en-US,en;q=0.9,es;q=0.8'
+            };
+            // Generate presence ping
+            await floHttp.post(FLO_PRESENCE_HEARTBEAT, {}, config);
+            this.log.info("Presence ping successful.");
         } catch(err)
         {
+            this.checkAuthFailure(err);
             if (err.response) {
                 this.log.error('Flo ping error: Server responded with status code:', err.response.status);
                 this.log.error('Response data:', err.response.data);
               } else if (err.request) {
-                this.log.error('Flo ping error: No response received:', err.request);
+                this.log.error('Flo ping error: No response received:', err.code || err.message);
               } else {
                 this.log.error('Flo ping error: Error creating request:', err.message);
             }
-            
+        } finally {
+            this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime);
         }
-        this.pingHandle = setTimeout(() => this.generatePing(), this.pingRefreshTime); 
     }
 }
 module.exports = FlobyMoen;
