@@ -467,7 +467,9 @@ class FlobyMoen extends EventEmitter {
            modeRequestbody.revertMinutes = this.sleepRevertMinutes;
            // revertMode -- Time to remain in sleep and mode to set after sleep concludes ("away" or "home")
            // preset to always home.
-           modeRequestbody.revertMode = revertMode;
+           // Defensive clamp: Flo's API only accepts 'home'/'away' here, in case a caller ever
+           // passes through a raw Flo state like 'sleep' or 'alarm' again.
+           modeRequestbody.revertMode = (revertMode === 'home' || revertMode === 'away') ? revertMode : 'home';
         }
 
         // Change monitor mode based on request
