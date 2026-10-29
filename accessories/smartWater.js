@@ -184,7 +184,15 @@ async getTargetState(callback) {
 
 // Change smart water shutoff monitoring state.
 async setTargetState(homekitState, callback) {
-    this.flo.setSystemMode(this.location, this.TARGET_HOMEKIT_TO_FLO[homekitState],this.systemCurrentState);
+    // Flo's systemMode API only accepts 'home' or 'away' for revertMode. systemCurrentState
+    // can be 'sleep' or 'alarm' at the moment this fires (e.g. toggling modes while the system
+    // is already in an alarm/triggered state), which Flo's API rejects with a 400 (Invalid
+    // property values: ['revertMode']) - the mode change then only succeeds on a later retry.
+    // Clamp to 'home' for anything that isn't already 'home'/'away'.
+    const revertMode = (this.systemCurrentState === 'home' || this.systemCurrentState === 'away')
+      ? this.systemCurrentState
+      : 'home';
+    this.flo.setSystemMode(this.location, this.TARGET_HOMEKIT_TO_FLO[homekitState], revertMode);
     this.systemCurrentState = this.TARGET_HOMEKIT_TO_FLO[homekitState];
     this.systemTargetState = this.TARGET_HOMEKIT_TO_FLO[homekitState];
     callback(null);
